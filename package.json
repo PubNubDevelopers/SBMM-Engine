@@ -2,8 +2,10 @@
   "name": "skill-based-matchmaking-demo",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "dist/main.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,6 +13,11 @@
   "license": "ISC",
   "dependencies": {
     "@pubnub/chat": "^0.8.2",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "pubnub": "^8.2.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es6",                            // Specify ECMAScript target version
+    "module": "commonjs",                       // Specify module code generation
+    "strict": true,                             // Enable strict type-checking options
+    "esModuleInterop": true,                    // Enable interoperability between CommonJS and ES Modules
+    "skipLibCheck": true,                       // Skip type checking of declaration files
+    "outDir": "./dist",                         // Output compiled files to the dist folder
+    "rootDir": ".",                             // Set root directory for TypeScript files (current folder and src)
+    "resolveJsonModule": true,                  // Allows importing .json files
+    "typeRoots": ["./node_modules/@types"]      // Include type definitions
+  },
+  "include": [
+    "src/**/*",                                 // Include all files inside src directory
+    "main.ts"                                   // Include the main.ts file in the root
+  ],
+  "exclude": [
+    "node_modules",                             // Exclude node_modules from compilation
+    "dist"                                      // Exclude dist folder from compilation
+  ]
+}
