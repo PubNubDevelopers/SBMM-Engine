@@ -4,15 +4,12 @@ import { getPubNubInstance } from "../utils/pubnub";
 /**
  * Process matchmaking logic
  */
-export async function processMatchMaking(channel: any, members: any[]) {
+export async function processMatchMaking(members: any[]) {
   // Pair members based on some criteria (e.g., skill rating)
   const pairs = pairMembers(members);
 
   for (const [player1, player2] of pairs){
     console.log(`Matched players: ${player1.id} and ${player2.id}`);
-
-    // Send match message to both users
-    await notifyClientsOfSharedMatchmakingChannel(player1.id, player2.id);
 
     // Create a pre-lobby listener for confirmation
     await createPreLobbyListener(player1, player2);
@@ -27,7 +24,7 @@ function pairMembers(members: Membership[]): [User, User][] {
 
   // sort members by skill, region, or any other matchmaking critera
   // Assuming skill ELO rating exsists in the user
-  const sortedMembers = members.sort((a, b) => a.user.custom.elo - b.user.custom.elo);
+  const sortedMembers = members.sort((a, b) => a.user.custom?.elo ?? 0 - b.user.custom?.elo ?? 0);
 
   // Create pairs from sorted members
   for(let i = 0; i < sortedMembers.length; i += 2){
@@ -41,23 +38,27 @@ function pairMembers(members: Membership[]): [User, User][] {
 
 /**
  * Notifify clients of shared matchmaking channel
+ *
  */
-async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player2Id: string){
+async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player2Id: string) {
+  // Set a 1-second timeout before proceeding with the function
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
   const chat = await getPubNubInstance();
 
   let channel1 = await chat.getChannel(`Matchmaking-In-Progress-${player1Id}`);
   let channel2 = await chat.getChannel(`Matchmaking-In-Progress-${player2Id}`);
 
-  if(channel1 === null){
+  if (channel1 === null) {
     channel1 = await chat.createPublicConversation({
       channelId: `Matchmaking-In-Progress-${player1Id}`
     });
   }
 
-  if(channel2 === null){
+  if (channel2 === null) {
     channel2 = await chat.createPublicConversation({
       channelId: `Matchmaking-In-Progress-${player2Id}`
-    })
+    });
   }
 
   // Define a shared lobby ID to notify the clients on what channel to send the message through when they have confirmed the match
@@ -83,6 +84,9 @@ async function createPreLobbyListener(player1: User, player2: User) {
     preLobbyChannel = await chat.createPublicConversation({ channelId: preLobbyChannelID });
     console.log(`Created pre-lobby channel: ${preLobbyChannelID}`);
   }
+
+  // Send match message to both users
+  await notifyClientsOfSharedMatchmakingChannel(player1.id, player2.id);
 
   let player1Confirmed = false;
   let player2Confirmed = false;
@@ -186,16 +190,6 @@ async function createChannelLobby(player1: User, player2: User, preLobbyChannel:
 
   preLobbyChannel.sendText(`game-lobby-${player1.id}-${player2.id}`);
 }
-
-/**
- * Send matchmaking message to both users
- */
-// async function sendMatchUserIdMessage(channel: Channel, userId1: string, userId2: string){
-//   const chat = await getPubNubInstance();
-
-//   // send a message to both players informing them of the match
-//   await channel.sendText("")
-// }
 
 
 

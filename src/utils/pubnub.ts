@@ -1,5 +1,6 @@
 import { Chat } from '@pubnub/chat';
 import dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
@@ -17,3 +18,23 @@ export const getPubNubInstance = async (): Promise<Chat> => {
   }
   return pubnubInstance;
 };
+
+export const getUsersPubNubInstance = async (userId: string): Promise<Chat> => {
+  const chat: Chat = await Chat.init({
+    publishKey: process.env.PUBLISH_KEY as string,
+    subscribeKey: process.env.SUBSCRIBE_KEY as string,
+    userId: userId
+  });
+
+  return chat;
+}
+
+export const getRandomUserInstance = async (): Promise<Chat> => {
+  const chat: Chat = await Chat.init({
+    publishKey: process.env.PUBLISH_KEY as string,
+    subscribeKey: process.env.SUBSCRIBE_KEY as string,
+    userId: uuidv4() // Generates a random UUID for the userId
+  });
+
+  return chat;
+}

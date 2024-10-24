@@ -1,5 +1,5 @@
 import { Channel, Membership, Message } from "@pubnub/chat";
-import { getPubNubInstance } from '../utils/pubnub';
+import { getPubNubInstance, getUsersPubNubInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
 
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval for running the matchmaking process
@@ -23,15 +23,16 @@ export async function startMatchmaking() {
     setInterval(async () => {
       // Get members from the matchmaking channel
       const members: Membership[] = await getChannelMembers(regionChannel);
-      // Loop through members and let the client side know that users matchmaking request is being processed
-      for (const member of members){
-        const userId = member.user.id
-        await notifiyClientMatchmakingStarted(userId);
-      }
 
       if(members.length >= 2){
+        // Loop through members and let the client side know that users matchmaking request is being processed
+        for (const member of members){
+          const userId = member.user.id
+          await kickUserFromMatchmakingChannel(userId, regionChannelID);
+          await notifiyClientMatchmakingStarted(userId);
+        }
         // Process matchmaking logic
-        await processMatchMaking(regionChannel, members);
+        await processMatchMaking(members);
       }
     }, MATCHMAKING_INTERVAL_MS);
   }
@@ -69,4 +70,18 @@ async function notifiyClientMatchmakingStarted(userId: string){
   channel.sendText(`Your matchmaking request is being processed for user: ${userId}`)
 
   console.log(`Notified user ${userId} that their matchmaking request is being processed.`);
+}
+
+async function kickUserFromMatchmakingChannel(userId: string, regionChannelID: string){
+  // Grab to users chat instance
+  const userChatInstance = await getUsersPubNubInstance(userId);
+  // Get the matchmaking channel that the user joined
+  const userChannel = await userChatInstance.getChannel(regionChannelID);
+
+  if(!userChannel){
+    console.log("Error deleting membership from user");
+  }
+  else{
+    userChannel.leave();
+  }
 }
