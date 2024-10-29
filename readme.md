@@ -4,6 +4,10 @@
 
 This project focuses on creating a **Skill-Based Matchmaking (SBMM)** system for multiplayer games using **PubNub** for real-time data communication. The system is designed to dynamically match players based on their skill level (using ELO ratings), latency, region, and other customizable factors. The goal is to provide a flexible and scalable matchmaking solution that can be integrated into multiplayer games, ensuring balanced and optimized matches.
 
+## Architecture Overview
+
+![Alt text](assets/sbm.drawio.png)
+
 ## Key Features
 
 - **Skill-Based Matchmaking (SBMM)**: Players are matched based on their ELO ratings using the Hungarian algorithm for the most cost-optimal solution.
@@ -11,6 +15,8 @@ This project focuses on creating a **Skill-Based Matchmaking (SBMM)** system for
 - **Flexible Filtering**: Players can be filtered by region, latency, and other customizable factors to ensure fair and smooth matches.
 - **Dynamic K-Factor for ELO Calculations**: The ELO rating system dynamically adjusts how quickly player ratings change based on their current rating.
 - **Modular Structure**: The system is designed for easy expansion with a clear separation of logic, ensuring that additional features like API integration can be added later.
+
+
 
 ## Folder Structure
 
