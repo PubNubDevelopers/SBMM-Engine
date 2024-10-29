@@ -1,4 +1,4 @@
-import { simulateMatchmakingUsers, simulateUser } from '../src/utils/test-runner'; // Import the function to test
+import { simulateMatchmakingUsers, simulateUser } from './utils/test-runner'; // Import the function to test
 
 
 

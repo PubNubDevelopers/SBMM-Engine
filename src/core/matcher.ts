@@ -1,51 +1,46 @@
 import { Channel, Membership, Message, User } from "@pubnub/chat";
-import { getPubNubInstance } from "../utils/pubnub";
+import { getPubNubChatInstance } from "../utils/pubnub";
+import { pairMembersWithLatencyAndSkill } from "./sbm";
 
 /**
  * Process matchmaking logic
+ *
+ * This function receives a list of players/members and pairs them up based on predefined criteria
+ * (such as skill level and latency). After pairing the members, it triggers the pre-lobby setup where players
+ * will confirm their participation in the match.
+ *
+ * @param members - List of players or users to be paired for matchmaking.
+ * @param latencyMap - A map of latencies between the users.
  */
-export async function processMatchMaking(members: any[]) {
-  // Pair members based on some criteria (e.g., skill rating)
-  const pairs = pairMembers(members);
+export async function processMatchMaking(members: any[], latencyMap: Map<string, Map<string, number>>) {
+  // Pair members using the latency and skill-based matchmaking algorithm
+  const pairs = pairMembersWithLatencyAndSkill(members, latencyMap);
 
-  for (const [player1, player2] of pairs){
+  // Iterate over each pair of players
+  for (const [player1, player2] of pairs) {
     console.log(`Matched players: ${player1.id} and ${player2.id}`);
 
-    // Create a pre-lobby listener for confirmation
+    // Create a pre-lobby listener to handle confirmation between the two players
     await createPreLobbyListener(player1, player2);
   }
 }
 
 /**
- * Pair members for matchmaking based on skill or other criteria
- */
-function pairMembers(members: Membership[]): [User, User][] {
-  const pairs: [User, User][] = [];
-
-  // sort members by skill, region, or any other matchmaking critera
-  // Assuming skill ELO rating exsists in the user
-  const sortedMembers = members.sort((a, b) => a.user.custom?.elo ?? 0 - b.user.custom?.elo ?? 0);
-
-  // Create pairs from sorted members
-  for(let i = 0; i < sortedMembers.length; i += 2){
-    if(sortedMembers[i + 1]){
-      pairs.push([sortedMembers[i].user, sortedMembers[i + 1].user]);
-    }
-  }
-
-  return pairs;
-}
-
-/**
- * Notifify clients of shared matchmaking channel
+ * Notify clients of the shared matchmaking channel
  *
+ * This function creates a shared pre-lobby channel between two players and notifies both players about
+ * the matchmaking request through their respective channels.
+ *
+ * @param player1Id - The ID of the first player.
+ * @param player2Id - The ID of the second player.
  */
 async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player2Id: string) {
-  // Set a 1-second timeout before proceeding with the function
+  // Simulate network delay (1 second) before proceeding
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  const chat = await getPubNubInstance();
+  const chat = await getPubNubChatInstance();
 
+  // Check if the channels exist for each player, if not create them
   let channel1 = await chat.getChannel(`Matchmaking-In-Progress-${player1Id}`);
   let channel2 = await chat.getChannel(`Matchmaking-In-Progress-${player2Id}`);
 
@@ -61,10 +56,10 @@ async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player
     });
   }
 
-  // Define a shared lobby ID to notify the clients on what channel to send the message through when they have confirmed the match
+  // Create a shared lobby ID for both players
   const sharedLobbyID = `pre-lobby-${player1Id}-${player2Id}`;
 
-  // Notify the client that their matchmaking request is being processed
+  // Notify both players of the shared matchmaking channel
   await channel1.sendText(sharedLobbyID);
   await channel2.sendText(sharedLobbyID);
 
@@ -73,37 +68,45 @@ async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player
 
 /**
  * Create a pre-lobby listener to confirm the match
+ *
+ * This function listens for match confirmation from both players within the pre-lobby.
+ * If both players confirm within a 30-second window, a game lobby is created. Otherwise,
+ * the players who didn't confirm will be punished.
+ *
+ * @param player1 - The first player object.
+ * @param player2 - The second player object.
  */
 async function createPreLobbyListener(player1: User, player2: User) {
-  const chat = await getPubNubInstance();
+  const chat = await getPubNubChatInstance();
   const preLobbyChannelID = `pre-lobby-${player1.id}-${player2.id}`;
 
-  // Create or get the pre-lobby channel
+  // Get or create the pre-lobby channel where confirmation takes place
   let preLobbyChannel = await chat.getChannel(preLobbyChannelID);
   if (!preLobbyChannel) {
     preLobbyChannel = await chat.createPublicConversation({ channelId: preLobbyChannelID });
     console.log(`Created pre-lobby channel: ${preLobbyChannelID}`);
   }
 
-  // Send match message to both users
+  // Notify both players about the shared matchmaking channel
   await notifyClientsOfSharedMatchmakingChannel(player1.id, player2.id);
 
   let player1Confirmed = false;
   let player2Confirmed = false;
 
-  // Set a timeout of 30 seconds for confirmation
+  // Timeout after 30 seconds if no confirmation is received
   const confirmationTimeout = new Promise((resolve) => {
     setTimeout(() => {
       resolve('timeout');
-    }, 30000); // 30 seconds
+    }, 30000); // 30-second timeout
   });
 
-  // Listener for confirmation from both players
+  // Listen for confirmation from both players
   const confirmationPromise = new Promise((resolve) => {
     preLobbyChannel.join(async (message: Message) => {
       if (message.content.text === "match_confirmed") {
         const { userId } = message;
 
+        // Mark player as confirmed and update their metadata
         if (userId === player1.id) {
           player1Confirmed = true;
           await updatePlayerMetadata(player1, { confirmed: true });
@@ -122,15 +125,16 @@ async function createPreLobbyListener(player1: User, player2: User) {
     });
   });
 
-  // Wait for either both players to confirm or the timeout
+  // Wait for confirmation from both players or timeout
   const result = await Promise.race([confirmationPromise, confirmationTimeout]);
 
   if (result === 'confirmed') {
-    // If both players confirm, create the actual game lobby
+    // Create a game lobby if both players confirm
     await createChannelLobby(player1, player2, preLobbyChannel);
   } else if (result === 'timeout') {
     console.log('Timeout: Both players did not confirm within 30 seconds');
-    // Punish the player(s) who didn't confirm
+
+    // Punish players who didn't confirm
     if (!player1Confirmed) {
       await updatePlayerMetadata(player1, { punished: true });
       console.log(`Player ${player1.id} has been punished.`);
@@ -145,26 +149,30 @@ async function createPreLobbyListener(player1: User, player2: User) {
   }
 }
 
-
 /**
  * Update player metadata in PubNub without overwriting existing custom attributes.
+ *
+ * This function merges the existing custom attributes with new data and updates the player's metadata.
+ *
+ * @param user - The player/user whose metadata needs updating.
+ * @param newCustomData - New custom data to be merged with the existing metadata.
  */
 async function updatePlayerMetadata(user: User, newCustomData: any) {
-  const chat = await getPubNubInstance();
+  const chat = await getPubNubChatInstance();
 
   try {
-    // First, get the current metadata for the user
+    // Fetch the user's existing metadata
     const userMetadata = user.custom;
 
-    // Merge the new custom data with the existing custom data
+    // Merge existing custom data with new custom fields
     const updatedCustomData = {
-      ...userMetadata.custom, // Existing custom data
-      ...newCustomData        // New custom fields to add or update
+      ...userMetadata.custom, // Existing data
+      ...newCustomData        // New data to update
     };
 
-    // Now update the user metadata with the merged custom data
+    // Update the user's metadata
     await user.update({
-      custom: updatedCustomData, // Update the metadata with merged data
+      custom: updatedCustomData, // Merged data
     });
 
     console.log(`Player metadata updated for ${user.id} with data:`, updatedCustomData);
@@ -174,20 +182,26 @@ async function updatePlayerMetadata(user: User, newCustomData: any) {
 }
 
 /**
- * Create the actual game lobby once both players agree
+ * Create the actual game lobby once both players confirm the match
+ *
+ * This function creates a new game lobby channel after both players agree to the match in the pre-lobby.
+ *
+ * @param player1 - The first player object.
+ * @param player2 - The second player object.
+ * @param preLobbyChannel - The pre-lobby channel where confirmation occurred.
  */
 async function createChannelLobby(player1: User, player2: User, preLobbyChannel: Channel) {
-  const chat = await getPubNubInstance();
+  const chat = await getPubNubChatInstance();
   const gameLobbyChannelID = `game-lobby-${player1.id}-${player2.id}`;
 
+  // Get or create the game lobby channel
   let gameLobbyChannel = await chat.getChannel(gameLobbyChannelID);
-
-  if(!gameLobbyChannel){
-    // Create the actual game lobby channel
+  if (!gameLobbyChannel) {
     gameLobbyChannel = await chat.createPublicConversation({ channelId: gameLobbyChannelID });
     console.log(`Game lobby created: ${gameLobbyChannelID}`);
   }
 
+  // Notify both players that the game lobby has been created
   preLobbyChannel.sendText(`game-lobby-${player1.id}-${player2.id}`);
 }
 

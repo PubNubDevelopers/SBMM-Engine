@@ -1,26 +1,9 @@
 import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
-import { getRandomUserInstance } from "./pubnub";
-import { MultiBar, Presets } from 'cli-progress'; // Import MultiBar for managing multiple progress bars
+import { getRandomUserChatInstance } from "../../src/utils/pubnub";
+import { startPingPong } from "./test-latency-runner";
 
 // Define the regions for matchmaking
 const regions = ['us-east-1', 'us-west-1', 'eu-central-1', 'ap-southeast-1'];
-// Create a multi-bar instance for managing multiple progress bars
-const multiBar = new MultiBar({
-  format: 'User {userIndex} in region {region} | {bar} | {state}',
-  barCompleteChar: '\u2588',
-  barIncompleteChar: '\u2591',
-  hideCursor: true,
-  clearOnComplete: false, // Ensure progress bars don't disappear
-  forceRedraw: true      // Force the progress bars to redraw in terminal
-}, Presets.shades_classic);
-
-const states = [
-  'Matchmaking Request Sent',
-  'Matchmaking Request Processed',
-  'PreLobby Channel',
-  'PreLobby Confirmed',
-  'Successfully Joined Lobby'
-];
 
 /**
  * Simulate 10 matchmaking users from different regions
@@ -40,7 +23,6 @@ export async function simulateMatchmakingUsers() {
 
   // Wait for all user simulations to complete
   await Promise.all(usersPromises);
-  multiBar.stop(); // Stop the progress bars when all users are done
 }
 
 /**
@@ -55,14 +37,10 @@ export async function simulateMatchmakingUsers() {
 export async function simulateUser(region: string, userIndex: number) {
   // console.log("Simulate single user request received");
   // Create a progress bar for this user
-  const userProgressBar = multiBar.create(states.length, 0, { region, userIndex, state: 'Starting...' });
-  const chat: Chat = await getRandomUserInstance(); // Get a new instance of a random user
+  const chat: Chat = await getRandomUserChatInstance(); // Get a new instance of a random user
   const user: User = chat.currentUser; // Fetch the current user for the chat instance
   let personalChannelID: string = `Matchmaking-In-Progress-${user.id}`;
   let gameLobbyChannelID: string | undefined; // To store the game lobby ID if received
-
-  // Update the progress bar to indicate that the matchmaking request was sent
-  userProgressBar.update(1, { state: states[0] });
 
   /**
    * Join the pre-lobby channel and listen for updates
@@ -80,7 +58,6 @@ export async function simulateUser(region: string, userIndex: number) {
         gameLobbyChannelID = message.content.text; // Save the game lobby channel ID
 
         joinGameLobby(gameLobbyChannelID, user.id); // Join the game lobby using the gameLobbyChannelID and user's ID
-        userProgressBar.update(5, { state: states[4] });
 
         await preLobbyChannel.leave(); // Leave the pre-lobby after joining the game lobby
       }
@@ -112,15 +89,23 @@ export async function simulateUser(region: string, userIndex: number) {
   // User joins the matchmaking channel and listens for messages
   await userChannel?.join(async (message: Message) => {
     // console.log(`(Client) Message received by User ${user.id} from region ${region}:`, message.content.text);
-
     try {
-      if (message.content.text.startsWith("pre-lobby-")) {
-        // Progress to the pre-lobby stage
-        userProgressBar.update(3, { state: states[2] });
-        // If the message contains a pre-lobby channel ID
-        const preLobbyChannelID = message.content.text; // Save the pre-lobby channel ID
+      let parsedMessage: any;
 
-        // console.log("Received pre-lobby channel: ", message.content.text);
+      // Try to parse the message as JSON
+      try {
+        parsedMessage = JSON.parse(message.content.text);
+      } catch (error) {
+        // If parsing fails, treat it as a plain string
+        parsedMessage = { message: message.content.text };
+      }
+
+      // Handle pre-lobby messages (whether as JSON or plain text)
+      if (parsedMessage.message && parsedMessage.message.startsWith("pre-lobby-")) {
+        // If the message contains a pre-lobby channel ID
+        const preLobbyChannelID = parsedMessage.message; // Save the pre-lobby channel ID
+
+        // console.log("Received pre-lobby channel: ", preLobbyChannelID);
 
         const preLobbyChannel = await chat.getChannel(preLobbyChannelID); // Retrieve the pre-lobby channel instance
 
@@ -129,14 +114,17 @@ export async function simulateUser(region: string, userIndex: number) {
         }
 
         await joinPreLobby(preLobbyChannel); // Join the pre-lobby
-
         await simulateJoiningLobby(preLobbyChannel); // Simulate the user joining the pre-lobby
-        userProgressBar.update(4, { state: states[3] });
-      } else if (message.content.text === `Matchmaking-In-Progress-${user.id}`) {
-        userProgressBar.update(2, { state: states[1] });
+      } else if (parsedMessage.message === `Matchmaking-In-Progress-${user.id}`) {
+        // If the message indicates that the matchmaking is in progress
         // console.log("Stopping matchmaking request"); // Log when matchmaking is stopped
+        const matchedUsers: string[] = parsedMessage.matchedUsers as string[];
+        const matchID: string = parsedMessage.matchID as string;
         await stopMatchmakingRequest(region, chat); // Stop the matchmaking request
-      } else if (message.content.text === `TIMEOUT`) {
+        const layencyMap: Map<string, number> = await startPingPong(matchedUsers);
+        await sendLatencyMap(layencyMap, matchID, chat);
+      } else if (parsedMessage.message === `TIMEOUT`) {
+        // If the message indicates a timeout
         // console.log("Matchmaking request timed out"); // Log timeout event
         await stopMatchmakingRequest(region, chat); // Stop the matchmaking request due to timeout
       }
@@ -219,6 +207,30 @@ async function stopMatchmakingRequest(region: string, chat: Chat) {
     }
   } catch (e) {
     console.log('(Client) Error leaving matchmaking request: ', e); // Log error if stopping the matchmaking request fails
+  }
+}
+
+async function sendLatencyMap(latencyMap: Map<string, number>, matchID: string, chat: Chat){
+  try{
+    // Find latency map channel
+    let channel = await chat.getChannel(`${matchID}-latency-channel`);
+
+    if(!channel){
+      throw new Error(`Can not find latency map channel at ID: ${matchID}-latency-channel`);
+    }
+
+    // Create a JSON object that includes the latencyMap
+    const parsedMessage = {
+      latencyMap: latencyMap
+    }
+
+    const jsonString = JSON.stringify(parsedMessage);
+
+    // Send the latency map
+    channel.sendText(jsonString);
+  }
+  catch(e){
+    console.log("Error sending letency map: ", e);
   }
 }
 
