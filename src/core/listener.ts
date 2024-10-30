@@ -1,9 +1,10 @@
 import { Channel, Membership, Message } from "@pubnub/chat";
-import { getPubNubChatInstance, getUsersPubNubChatInstance } from '../utils/pubnub';
+import { getPubNubChatInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
 
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval (in milliseconds) to run the matchmaking process
 const regions = ['us-east-1', 'us-west-1', 'eu-central-1', 'ap-southeast-1']; // Defined regions for matchmaking
+const serverID = "server";
 
 /**
  * Start the matchmaking process loop
@@ -13,7 +14,7 @@ const regions = ['us-east-1', 'us-west-1', 'eu-central-1', 'ap-southeast-1']; //
  * processes matchmaking logic if there are enough players.
  */
 export async function startMatchmaking() {
-  const chat = await getPubNubChatInstance();
+  const chat = await getPubNubChatInstance(serverID);
 
   // Iterate over all defined regions
   for (const region of regions) {
@@ -40,6 +41,8 @@ export async function startMatchmaking() {
         let matchID: string = generateMatchID();
 
         let matchChannel: Channel = await createLatencyMapChannel(matchID);
+
+        console.log("Received Latency Maps");
 
         // Start collecting latency maps (don't await here to avoid blocking the process)
         const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
@@ -89,7 +92,7 @@ async function getChannelMembers(channel: Channel): Promise<any[]> {
  * @param userIds - A list of other user IDs involved in the matchmaking process.
  */
 async function notifyClientMatchmakingStarted(userId: string, userIds: string[], matchID: string) {
-  const chat = await getPubNubChatInstance();
+  const chat = await getPubNubChatInstance(serverID);
 
   // Get or create the user's matchmaking channel
   let channel = await chat.getChannel(`Matchmaking-In-Progress-${userId}`);
@@ -103,7 +106,7 @@ async function notifyClientMatchmakingStarted(userId: string, userIds: string[],
 
   // Create a JSON object that includes the list of user IDs
   const messagePayload = {
-    message: "Your matchmaking request is being processed.",
+    message: "Processing",
     matchID: matchID,
     matchedUsers: userIds
   };
@@ -127,7 +130,7 @@ async function notifyClientMatchmakingStarted(userId: string, userIds: string[],
  */
 async function kickUserFromMatchmakingChannel(userId: string, regionChannelID: string) {
   // Get the user's specific PubNub instance (user chat session)
-  const userChatInstance = await getUsersPubNubChatInstance(userId);
+  const userChatInstance = await getPubNubChatInstance(userId);
 
   // Get the region-specific matchmaking channel that the user is currently in
   const userChannel = await userChatInstance.getChannel(regionChannelID);
@@ -142,7 +145,7 @@ async function kickUserFromMatchmakingChannel(userId: string, regionChannelID: s
 
 
 async function createLatencyMapChannel(matchID: string): Promise<Channel> {
-  const chat = await getPubNubChatInstance();
+  const chat = await getPubNubChatInstance(serverID);
 
   let channel = await chat.getChannel(`${matchID}-latency-channel`);
 

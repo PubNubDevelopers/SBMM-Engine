@@ -2,6 +2,8 @@ import { Channel, Membership, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../utils/pubnub";
 import { pairMembersWithLatencyAndSkill } from "./sbm";
 
+const serverID = "server"
+
 /**
  * Process matchmaking logic
  *
@@ -13,6 +15,7 @@ import { pairMembersWithLatencyAndSkill } from "./sbm";
  * @param latencyMap - A map of latencies between the users.
  */
 export async function processMatchMaking(members: any[], latencyMap: Map<string, Map<string, number>>) {
+  console.log("Latency Map: ", latencyMap);
   // Pair members using the latency and skill-based matchmaking algorithm
   const pairs = pairMembersWithLatencyAndSkill(members, latencyMap);
 
@@ -35,10 +38,12 @@ export async function processMatchMaking(members: any[], latencyMap: Map<string,
  * @param player2Id - The ID of the second player.
  */
 async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player2Id: string) {
+  // Wait 3s
+  const waitTime = 3000;
   // Simulate network delay (1 second) before proceeding
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => setTimeout(resolve, waitTime));
 
-  const chat = await getPubNubChatInstance();
+  const chat = await getPubNubChatInstance(serverID);
 
   // Check if the channels exist for each player, if not create them
   let channel1 = await chat.getChannel(`Matchmaking-In-Progress-${player1Id}`);
@@ -59,6 +64,7 @@ async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player
   // Create a shared lobby ID for both players
   const sharedLobbyID = `pre-lobby-${player1Id}-${player2Id}`;
 
+  console.log("Sending Text for shared lobby");
   // Notify both players of the shared matchmaking channel
   await channel1.sendText(sharedLobbyID);
   await channel2.sendText(sharedLobbyID);
@@ -77,7 +83,7 @@ async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player
  * @param player2 - The second player object.
  */
 async function createPreLobbyListener(player1: User, player2: User) {
-  const chat = await getPubNubChatInstance();
+  const chat = await getPubNubChatInstance(serverID);
   const preLobbyChannelID = `pre-lobby-${player1.id}-${player2.id}`;
 
   // Get or create the pre-lobby channel where confirmation takes place
@@ -158,8 +164,6 @@ async function createPreLobbyListener(player1: User, player2: User) {
  * @param newCustomData - New custom data to be merged with the existing metadata.
  */
 async function updatePlayerMetadata(user: User, newCustomData: any) {
-  const chat = await getPubNubChatInstance();
-
   try {
     // Fetch the user's existing metadata
     const userMetadata = user.custom;
@@ -191,7 +195,7 @@ async function updatePlayerMetadata(user: User, newCustomData: any) {
  * @param preLobbyChannel - The pre-lobby channel where confirmation occurred.
  */
 async function createChannelLobby(player1: User, player2: User, preLobbyChannel: Channel) {
-  const chat = await getPubNubChatInstance();
+  const chat = await getPubNubChatInstance(serverID);
   const gameLobbyChannelID = `game-lobby-${player1.id}-${player2.id}`;
 
   // Get or create the game lobby channel

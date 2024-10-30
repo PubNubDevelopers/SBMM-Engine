@@ -1,12 +1,13 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/*.test.ts'],  // Looks for .test.ts files
+  testMatch: ['**/*.test.ts'],
   extensionsToTreatAsEsm: ['.ts'],
   globals: {
     'ts-jest': {
       useESM: true,
     },
   },
-  testTimeout: 60000, // Set global test timeout to 1 minute (60000 ms)
+  testTimeout: 60000,
+  silent: false,  // Ensure logging is not suppressed
 };

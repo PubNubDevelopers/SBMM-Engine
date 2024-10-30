@@ -1,10 +1,32 @@
-import { Membership, User } from "@pubnub/chat"; // Assuming you have these types defined
+import { Membership, User } from "@pubnub/chat";
 import { minWeightAssign } from 'munkres-algorithm';
 
 // Define weights for latency and skill (you can adjust these based on priority)
 const LATENCY_WEIGHT = 0.7;
 const SKILL_WEIGHT = 0.3;
 
+/**
+ * Safely get the latency between two users from the latencyMap
+ *
+ * @param latencyMap - Map<string, Map<string, number>> of latencies between users
+ * @param userA - ID of the first user
+ * @param userB - ID of the second user
+ * @returns The latency between userA and userB or Infinity if not available
+ */
+function getLatency(latencyMap: Map<string, any>, userA: string, userB: string): number {
+  let latenciesForA = latencyMap.get(userA);
+
+  // Check if latenciesForA is a Map, if not, convert it from an object to a Map
+  if (!(latenciesForA instanceof Map)) {
+    if (typeof latenciesForA === 'object') {
+      latenciesForA = new Map(Object.entries(latenciesForA)); // Convert object to Map
+    } else {
+      latenciesForA = new Map(); // Fallback to an empty map
+    }
+  }
+
+  return latenciesForA.get(userB) ?? Infinity; // Default to Infinity if no latency found
+}
 
 /**
  * Calculate the score between two users based on latency and ELO difference
@@ -15,8 +37,8 @@ const SKILL_WEIGHT = 0.3;
  * @returns A score representing the cost of pairing these two users
  */
 function calculateScore(userA: User, userB: User, latencyMap: Map<string, Map<string, number>>): number {
-  const latencyAtoB = latencyMap.get(userA.id)?.get(userB.id) ?? Infinity;
-  const latencyBtoA = latencyMap.get(userB.id)?.get(userA.id) ?? Infinity;
+  const latencyAtoB = getLatency(latencyMap, userA.id, userB.id);
+  const latencyBtoA = getLatency(latencyMap, userB.id, userA.id);
 
   // Average latency between the two users
   const averageLatency = (latencyAtoB + latencyBtoA) / 2;

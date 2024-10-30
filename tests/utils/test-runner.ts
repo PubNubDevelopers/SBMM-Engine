@@ -1,6 +1,7 @@
 import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
-import { getRandomUserChatInstance } from "../../src/utils/pubnub";
 import { startPingPong } from "./test-latency-runner";
+import { v4 as uuidv4 } from 'uuid';
+import { getPubNubChatInstance } from "../../src/utils/pubnub";
 
 // Define the regions for matchmaking
 const regions = ['us-east-1', 'us-west-1', 'eu-central-1', 'ap-southeast-1'];
@@ -17,7 +18,7 @@ export async function simulateMatchmakingUsers() {
 
   // Loop through the number of users and assign each a random region
   for (let i = 0; i < numberOfUsers; i++) {
-    const region = regions[Math.floor(Math.random() * regions.length)]; // Randomly pick a region
+    const region = 'us-east-1'; // Randomly pick a region
     usersPromises.push(simulateUser(region, i)); // Simulate each user and add to promises array
   }
 
@@ -35,9 +36,11 @@ export async function simulateMatchmakingUsers() {
  * @param userIndex - The index number of the user being simulated
  */
 export async function simulateUser(region: string, userIndex: number) {
-  // console.log("Simulate single user request received");
+  console.log("Simulate single user request received");
+  // Create a consistnat userID
+  const userID = uuidv4();
   // Create a progress bar for this user
-  const chat: Chat = await getRandomUserChatInstance(); // Get a new instance of a random user
+  const chat: Chat = await getPubNubChatInstance(userID); // Get a new instance of a random user
   const user: User = chat.currentUser; // Fetch the current user for the chat instance
   let personalChannelID: string = `Matchmaking-In-Progress-${user.id}`;
   let gameLobbyChannelID: string | undefined; // To store the game lobby ID if received
@@ -51,7 +54,7 @@ export async function simulateUser(region: string, userIndex: number) {
   async function joinPreLobby(preLobbyChannel: Channel) {
     // Join the pre-lobby channel and listen for updates
     await preLobbyChannel.join(async (message: Message) => {
-      // console.log(`(Client) Joined the pre-lobby channel: Listening for updates`);
+      console.log(`(Client) Joined the pre-lobby channel: Listening for updates`);
 
       // If a game lobby message is received, handle joining the game lobby
       if (message.content.text.startsWith(`game-lobby-`)) {
@@ -79,16 +82,16 @@ export async function simulateUser(region: string, userIndex: number) {
   let userChannel: Channel | null = await chat.getChannel(personalChannelID);
 
   if(!userChannel){
-    // console.log(`Channel with ID: ${personalChannelID} was not created. Creating Channel...`);
+    console.log(`Channel with ID: ${personalChannelID} was not created. Creating Channel...`);
     userChannel = await chat.createPublicConversation({channelId: personalChannelID});
-    // console.log(`Successfully created channel with ID: ${personalChannelID}`);
+    console.log(`Successfully created channel with ID: ${personalChannelID}`);
   }
 
-  // console.log(`(Server) User ${user.id} from region ${region} is joining channel ${userChannel?.id}`);
+  console.log(`(Server) User ${user.id} from region ${region} is joining channel ${userChannel?.id}`);
 
   // User joins the matchmaking channel and listens for messages
   await userChannel?.join(async (message: Message) => {
-    // console.log(`(Client) Message received by User ${user.id} from region ${region}:`, message.content.text);
+    console.log(`(Client) Message received by User ${user.id} from region ${region}:`, message.content.text);
     try {
       let parsedMessage: any;
 
@@ -100,12 +103,14 @@ export async function simulateUser(region: string, userIndex: number) {
         parsedMessage = { message: message.content.text };
       }
 
+      console.log("Parsed Message: ", parsedMessage);
+
       // Handle pre-lobby messages (whether as JSON or plain text)
       if (parsedMessage.message && parsedMessage.message.startsWith("pre-lobby-")) {
         // If the message contains a pre-lobby channel ID
         const preLobbyChannelID = parsedMessage.message; // Save the pre-lobby channel ID
 
-        // console.log("Received pre-lobby channel: ", preLobbyChannelID);
+        console.log("Received pre-lobby channel: ", preLobbyChannelID);
 
         const preLobbyChannel = await chat.getChannel(preLobbyChannelID); // Retrieve the pre-lobby channel instance
 
@@ -115,17 +120,18 @@ export async function simulateUser(region: string, userIndex: number) {
 
         await joinPreLobby(preLobbyChannel); // Join the pre-lobby
         await simulateJoiningLobby(preLobbyChannel); // Simulate the user joining the pre-lobby
-      } else if (parsedMessage.message === `Matchmaking-In-Progress-${user.id}`) {
+      } else if (parsedMessage.message === `Processing`) {
         // If the message indicates that the matchmaking is in progress
-        // console.log("Stopping matchmaking request"); // Log when matchmaking is stopped
+        console.log("Stopping matchmaking request"); // Log when matchmaking is stopped
         const matchedUsers: string[] = parsedMessage.matchedUsers as string[];
         const matchID: string = parsedMessage.matchID as string;
         await stopMatchmakingRequest(region, chat); // Stop the matchmaking request
-        const layencyMap: Map<string, number> = await startPingPong(matchedUsers);
+        console.log("Starting Ping Pong");
+        const layencyMap: Map<string, number> = await startPingPong(matchedUsers, userID);
         await sendLatencyMap(layencyMap, matchID, chat);
       } else if (parsedMessage.message === `TIMEOUT`) {
         // If the message indicates a timeout
-        // console.log("Matchmaking request timed out"); // Log timeout event
+        console.log("Matchmaking request timed out"); // Log timeout event
         await stopMatchmakingRequest(region, chat); // Stop the matchmaking request due to timeout
       }
     } catch (e) {
