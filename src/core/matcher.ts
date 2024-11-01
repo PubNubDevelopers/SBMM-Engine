@@ -22,6 +22,8 @@ export async function processMatchMaking(members: any[], latencyMap: Map<string,
   // Iterate over each pair of players
   for (const [player1, player2] of pairs) {
     console.log(`Matched players: ${player1.id} and ${player2.id}`);
+    // Notify Testing Client of Matched Players
+    await notifyTestingClientofMatchedUsers(player1.id, player2.id);
 
     // Create a pre-lobby listener to handle confirmation between the two players
     await createPreLobbyListener(player1, player2);
@@ -111,6 +113,8 @@ async function createPreLobbyListener(player1: User, player2: User) {
     preLobbyChannel.join(async (message: Message) => {
       if (message.content.text === "match_confirmed") {
         const { userId } = message;
+        // Testing: Notify web client
+        await notifyTestingClientofUserConfirmed(userId);
 
         // Mark player as confirmed and update their metadata
         if (userId === player1.id) {
@@ -207,6 +211,90 @@ async function createChannelLobby(player1: User, player2: User, preLobbyChannel:
 
   // Notify both players that the game lobby has been created
   preLobbyChannel.sendText(`game-lobby-${player1.id}-${player2.id}`);
+
+  // Testing: Notify web client of users in match
+  await notifyTestingClientofUsersInMatch(player1.id, player2.id);
+}
+
+// Testing Client Funcitons
+
+// Testing Server to Client Functions
+async function notifyTestingClientofMatchedUsers(player1: string, player2: string){
+  const chat = await getPubNubChatInstance(serverID);
+
+  // Get or create the user's matchmaking channel
+  let channel = await chat.getChannel(`Matchmaking-In-Progress-Client-Testing`);
+
+  if(channel === null){
+    // If the channel doesn't exist, create a new one
+    channel = await chat.createPublicConversation({
+      channelId: `Matchmaking-In-Progress-Client-Testing`
+    })
+  }
+
+  // Create a JSON object that includes the list of user IDs
+  const messagePayload = {
+    message: "Matched",
+    matchedUsers: [player1, player2]
+  };
+
+  const jsonString = JSON.stringify(messagePayload);
+
+  await channel.sendText(jsonString);
+
+  console.log(`Notified user client with the following JSON: ${jsonString}`);
+}
+
+async function notifyTestingClientofUserConfirmed(id: string){
+  const chat = await getPubNubChatInstance(serverID);
+
+  // Get or create the user's matchmaking channel
+  let channel = await chat.getChannel(`Matchmaking-In-Progress-Client-Testing`);
+
+  if(channel === null){
+    // If the channel doesn't exist, create a new one
+    channel = await chat.createPublicConversation({
+      channelId: `Matchmaking-In-Progress-Client-Testing`
+    })
+  }
+
+  // Create a JSON object that includes the list of user IDs
+  const messagePayload = {
+    message: "Confirmed",
+    user: id
+  };
+
+  const jsonString = JSON.stringify(messagePayload);
+
+  await channel.sendText(jsonString);
+
+  console.log(`Notified user client with the following JSON: ${jsonString}`);
+}
+
+async function notifyTestingClientofUsersInMatch(player1: string, player2: string){
+  const chat = await getPubNubChatInstance(serverID);
+
+  // Get or create the user's matchmaking channel
+  let channel = await chat.getChannel(`Matchmaking-In-Progress-Client-Testing`);
+
+  if(channel === null){
+    // If the channel doesn't exist, create a new one
+    channel = await chat.createPublicConversation({
+      channelId: `Matchmaking-In-Progress-Client-Testing`
+    })
+  }
+
+  // Create a JSON object that includes the list of user IDs
+  const messagePayload = {
+    message: "InMatch",
+    matchedUsers: [player1, player2]
+  };
+
+  const jsonString = JSON.stringify(messagePayload);
+
+  await channel.sendText(jsonString);
+
+  console.log(`Notified user client with the following JSON: ${jsonString}`);
 }
 
 

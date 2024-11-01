@@ -42,8 +42,6 @@ export async function startMatchmaking() {
 
         let matchChannel: Channel = await createLatencyMapChannel(matchID);
 
-        console.log("Received Latency Maps");
-
         // Start collecting latency maps (don't await here to avoid blocking the process)
         const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
 
@@ -52,6 +50,8 @@ export async function startMatchmaking() {
           const userId = member.user.id;
           await kickUserFromMatchmakingChannel(userId, regionChannelID); // Remove the user from the matchmaking channel
           await notifyClientMatchmakingStarted(userId, userIds, matchID); // Notify the user that their matchmaking request is being processed
+          // Notify web client for testing purposes
+          await notifyTestingClientUsersMatchmaking(userIds);
         }
 
         // Wait for the latency maps to be collected asynchronously
@@ -200,4 +200,31 @@ async function receiveMatchmakingLatencyMaps(matchChannel: Channel): Promise<Map
 // Utility function to generate a random match ID
 function generateMatchID(): string {
   return `match-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`;
+}
+
+// Testing Server to Client Functions
+async function notifyTestingClientUsersMatchmaking(userIds: string[]){
+  const chat = await getPubNubChatInstance(serverID);
+
+  // Get or create the user's matchmaking channel
+  let channel = await chat.getChannel(`Matchmaking-In-Progress-Client-Testing`);
+
+  if(channel === null){
+    // If the channel doesn't exist, create a new one
+    channel = await chat.createPublicConversation({
+      channelId: `Matchmaking-In-Progress-Client-Testing`
+    })
+  }
+
+  // Create a JSON object that includes the list of user IDs
+  const messagePayload = {
+    message: "Joining",
+    matchedUsers: userIds
+  };
+
+  const jsonString = JSON.stringify(messagePayload);
+
+  await channel.sendText(jsonString);
+
+  console.log(`Notified user client with the following JSON: ${jsonString}`);
 }

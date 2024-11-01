@@ -18,8 +18,10 @@ export async function simulateMatchmakingUsers() {
 
   // Loop through the number of users and assign each a random region
   for (let i = 0; i < numberOfUsers; i++) {
-    const region = 'us-east-1'; // Randomly pick a region
-    usersPromises.push(simulateUser(region, i)); // Simulate each user and add to promises array
+    const region = 'us-east-1';
+    // Create a consistnat userID
+    const userID = uuidv4();
+    usersPromises.push(simulateUser(region, userID)); // Simulate each user and add to promises array
   }
 
   // Wait for all user simulations to complete
@@ -35,10 +37,8 @@ export async function simulateMatchmakingUsers() {
  * @param region - The region assigned to the user (e.g., 'us-east-1')
  * @param userIndex - The index number of the user being simulated
  */
-export async function simulateUser(region: string, userIndex: number) {
+export async function simulateUser(region: string, userID: string) {
   console.log("Simulate single user request received");
-  // Create a consistnat userID
-  const userID = uuidv4();
   // Create a progress bar for this user
   const chat: Chat = await getPubNubChatInstance(userID); // Get a new instance of a random user
   const user: User = chat.currentUser; // Fetch the current user for the chat instance
@@ -269,3 +269,4 @@ async function simulateJoiningLobby(preLobbyChannel: Channel) {
 function joinGameLobby(gameLobbyID: string, userID: string) {
   // console.log(`User: ${userID} has successfully joined game lobby: ${gameLobbyID}`);
 }
+

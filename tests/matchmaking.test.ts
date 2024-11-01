@@ -43,7 +43,7 @@ describe('Single User Matchmaking Test', () => {
     const simulateOneUser = async () => {
       const region = 'us-east-1'; // Define the region for this test
       console.log(`Simulating user in region: ${region}`); // Log before simulating user
-      await simulateUser(region, 0); // Simulate a single user with index 0
+      await simulateUser(region, '1'); // Simulate a single user with index 0
       console.log(`Finished simulation for user in region: ${region}`); // Log after simulating user
     };
 
