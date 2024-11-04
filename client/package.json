@@ -9,18 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@pubnub/chat": "^0.8.2",
+    "next": "15.0.1",
     "react": "19.0.0-rc-69d4b800-20241021",
     "react-dom": "19.0.0-rc-69d4b800-20241021",
-    "next": "15.0.1",
-    "@pubnub/chat": "^0.8.2"
+    "uuidv4": "^6.2.13"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "postcss": "^8",
+    "pubnub": "^8.2.9",
     "tailwindcss": "^3.4.1",
-    "pubnub": "^8.2.9"
+    "typescript": "^5"
   }
 }

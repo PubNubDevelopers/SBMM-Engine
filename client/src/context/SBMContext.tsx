@@ -5,11 +5,17 @@ import React, { ReactNode, useEffect, useState } from "react";
 import { simulateUser } from '../../../tests/utils/test-runner';
 import userJson from "../user.json";
 import { generateUsername } from "unique-username-generator";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface SBMType {
   chat: Chat | undefined;
   matchMakingUsers: User[],
-  simulateUsers: (count: number) => Promise<void>
+  skillBuckets: Map<SkillRange, User[]>,
+  recentMatchedUsers: User[],
+  userStatusMap: Map<string, string>,
+  logs: string[],
+  simulateUsers: (count: number) => Promise<void>,
+  generateUsers: (count: number) => Promise<void>
 }
 
 export const SBMContext = React.createContext<SBMType | null>(null);
@@ -62,39 +68,138 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Updates the allUsers state with the retrieved users.
   */
   const getAllUsers = async () => {
-    const u = await chat?.getUsers({
-      limit: 100
+    const u = await chat?.getUsers({ limit: 1000 });
+    if (u) {
+      // console.log("Initial fetched users from PubNub:");
+      // printUsersData(u.users);  // Log initial data
+
+      // Uncomment the following line to clean and update user data
+      const users = await cleanUserData(u.users);
+      // printUsersData(users);  // Log cleaned data
+
+      console.log(users.length);
+      setAllUsers(users);
+      organizeUsersIntoSkillBuckets(users);
+    }
+  };
+
+  /*
+  * Prints the data for a list of users, including name and custom attributes for each user.
+  */
+  const printUsersData = (users: User[]): void => {
+    users.forEach((user, index) => {
+      console.log(`\n--- User ${index + 1} ---`);
+      console.log(`User ID: ${user.id}`);
+      console.log(`Name: ${user.name || "No name available"}`);
+
+      if (user.custom) {
+        console.log("Custom Attributes:");
+        console.log(`  ELO: ${user.custom.elo !== undefined ? user.custom.elo : "Not set"}`);
+        console.log(`  Punished: ${user.custom.punished !== undefined ? user.custom.punished : "Not set"}`);
+        console.log(`  Confirmed: ${user.custom.confirmed !== undefined ? user.custom.confirmed : "Not set"}`);
+        console.log(`  In Match: ${user.custom.inMatch !== undefined ? user.custom.inMatch : "Not set"}`);
+        console.log(`  In Pre-Lobby: ${user.custom.inPreLobby !== undefined ? user.custom.inPreLobby : "Not set"}`);
+        console.log(`  Server: ${user.custom.server || "Not set"}`);
+        console.log(`  Latency: ${user.custom.latency !== undefined ? user.custom.latency : "Not set"}`);
+      } else {
+        console.log("Custom Attributes: None");
+      }
     });
-    if(u) setAllUsers(u.users)
-  }
+  };
+
+  /*
+  * Ensures each user has required fields by adding missing attributes without overwriting existing values
+  * Returns a list of users that were updated
+  */
+  const cleanUserData = async (users: User[]): Promise<User[]> => {
+    const allUsers: User[] = [];
+
+    await Promise.all(users.map(async (user) => {
+      let needsUpdate = false; // Track if any field is missing or needs updating
+
+      const updatedData: {
+        name?: string;
+        custom: {
+          elo: number;
+          punished: boolean;
+          confirmed: boolean;
+          inMatch: boolean;
+          inPreLobby: boolean;
+          server: string;
+          latency: number;
+        };
+      } = { custom: {} as any };  // Initialize custom to ensure it is always defined
+
+      // Only set the name if it's missing or starts with a number
+      if (!user.name || /^\d/.test(user.name)) {
+        updatedData.name = generateUsername();
+        needsUpdate = true;
+        console.log(`Generated name for user (ID: ${user.id}): ${updatedData.name}`);
+      }
+
+      // Set each field in updatedData.custom, and mark needsUpdate as true if any field is missing
+      updatedData.custom = {
+        elo: user.custom?.elo ?? (() => { needsUpdate = true; return generateLongTailElo(); })(),
+        punished: user.custom?.punished ?? (() => { needsUpdate = true; return false; })(),
+        confirmed: user.custom?.confirmed ?? (() => { needsUpdate = true; return false; })(),
+        inMatch: user.custom?.inMatch ?? (() => { needsUpdate = true; return false; })(),
+        inPreLobby: user.custom?.inPreLobby ?? (() => { needsUpdate = true; return false; })(),
+        server: user.custom?.server ?? (() => { needsUpdate = true; return 'us-east-1'; })(),
+        latency: user.custom?.latency ?? (() => { needsUpdate = true; return Math.floor(Math.random() * 100) + 20; })()
+      };
+
+      // Only update if there are fields that were missing and set in updatedData
+      if (needsUpdate) {
+        try {
+          console.log(`Attempting to update user (ID: ${user.id}) with data:`, JSON.stringify(updatedData, null, 2));
+          const updatedUser = await user.update(updatedData);
+          allUsers.push(updatedUser);
+          console.log(`Updated user data returned from PubNub for user ID ${user.id}:`, JSON.stringify(updatedUser, null, 2));
+        } catch (error) {
+          console.error(`Failed to update user ${user.name} (ID: ${user.id}):`, error);
+        }
+      } else {
+        // If no update was needed, add the original user
+        allUsers.push(user);
+      }
+    }));
+
+    return allUsers;
+  };
 
   /*
   * Organizes users into skill buckets based on their elo rating.
   * Buckets are mapped according to predefined elo ranges.
   * Updates the skillBuckets state with the sorted user data.
   */
-  const organizeUsersIntoSkillBuckets = () => {
-    const buckets: Map<SkillRange, User[]> = new Map([
-      [SkillRange.Range1, []],
-      [SkillRange.Range2, []],
-      [SkillRange.Range3, []],
-      [SkillRange.Range4, []],
-    ]);
+  const organizeUsersIntoSkillBuckets = (users: User[]) => {
+    setSkillBuckets((prevBuckets) => {
+      // Create a new Map based on the existing buckets or initialize if they don't exist
+      const updatedBuckets = new Map(prevBuckets);
 
-    allUsers.forEach(user => {
-      const elo = user.custom?.elo || 0;
-      if (elo < 1000) {
-        buckets.get(SkillRange.Range1)?.push(user);
-      } else if (elo < 1500) {
-        buckets.get(SkillRange.Range2)?.push(user);
-      } else if (elo < 2000) {
-        buckets.get(SkillRange.Range3)?.push(user);
-      } else {
-        buckets.get(SkillRange.Range4)?.push(user);
-      }
+      // Ensure each skill range bucket exists in the updatedBuckets map
+      if (!updatedBuckets.has(SkillRange.Range1)) updatedBuckets.set(SkillRange.Range1, []);
+      if (!updatedBuckets.has(SkillRange.Range2)) updatedBuckets.set(SkillRange.Range2, []);
+      if (!updatedBuckets.has(SkillRange.Range3)) updatedBuckets.set(SkillRange.Range3, []);
+      if (!updatedBuckets.has(SkillRange.Range4)) updatedBuckets.set(SkillRange.Range4, []);
+
+      // Iterate through the users and assign them to the appropriate skill bucket
+      users.forEach(user => {
+        const elo = user.custom?.elo || 0;
+
+        if (elo < 1000) {
+          updatedBuckets.get(SkillRange.Range1)?.push(user);
+        } else if (elo < 1500) {
+          updatedBuckets.get(SkillRange.Range2)?.push(user);
+        } else if (elo < 2000) {
+          updatedBuckets.get(SkillRange.Range3)?.push(user);
+        } else {
+          updatedBuckets.get(SkillRange.Range4)?.push(user);
+        }
+      });
+
+      return updatedBuckets;
     });
-
-    setSkillBuckets(buckets);
   };
 
   /*
@@ -119,13 +224,15 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all(usersPromises); // Wait for all simulations to complete
   };
 
+
   /*
-  * Retrieves the highest user ID from the user JSON file.
-  * Used to determine the starting point for generating new user IDs.
-  * Returns the maximum ID found.
-  */
-  function getMaxId(){
-    return userJson.users.reduce((maxId, user) => Math.max(maxId, user.id), 0);
+ * Generates an elo value with a long-tail distribution between 0 and 3000.
+ * The result is skewed towards lower values, with fewer high-end values.
+ */
+  const generateLongTailElo = () => {
+    const maxElo = 3000;
+    const random = Math.random();
+    return Math.floor(maxElo * Math.pow(random, 3)); // Cubic distribution for long tail
   }
 
   /*
@@ -134,23 +241,35 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Adds each newly created user to the allUsers state.
   */
   const generateUsers = async (count: number) => {
-    const lastId = getMaxId();
-    for (let i = lastId + 1; i <= lastId + count; i++){
+    let users: User[] = [];
+
+    for (let i = 0; i < count; i++) {
       const u = generateUsername();
+      console.log("Generated username: ", u);
       const userMeta = {
-        id: i,
+        id: uuidv4(),
         username: u,
+        elo: generateLongTailElo(),
         punished: false,
         confirmed: false,
         inMatch: false,
         inPreLobby: false,
         server: 'us-east-1',
         latency: Math.floor(Math.random() * 100) + 20
-      }
+      };
+
       const user = await createUser(userMeta);
-      if(user) setAllUsers([...allUsers, user]);
+      if (user) {
+        users.push(user); // Add each created user to the users array
+      }
     }
-  }
+
+    // Update the allUsers state by appending the new users
+    setAllUsers((prevAllUsers) => [...prevAllUsers, ...users]);
+
+    // Organize the new users into skill buckets
+    organizeUsersIntoSkillBuckets(users);
+  };
 
   /*
   * Creates a user if they don’t already exist within the chat instance.
@@ -158,22 +277,29 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Returns the created or existing user, or logs an error if unsuccessful.
   */
   async function createUser(u: any): Promise<User | undefined> {
+    if(!chat) {
+      console.log("Failed to initialize chat");
+      return;
+    }
     try{
-      let user: User | null | undefined = await chat?.getUser(u.id);
-      if(!user){
-        user = await chat?.createUser(u.id, {
-          name: u.username,
-          custom: {
-            elo: u.elo,
-            punished: u.punished,
-            confirmed: u.confirmed,
-            inMatch: u.inMatch,
-            inPreLobby: u.inPreLobby,
-            server: u.server,
-            latency: u.latency
-          }
-        });
-      }
+      console.log(u.id);
+      console.log(u.username);
+      console.log(u.elo);
+      console.log(u.punished);
+      const user = await chat.createUser(u.id, {
+        name: u.username,
+        custom: {
+          elo: u.elo,
+          punished: u.punished,
+          confirmed: u.confirmed,
+          inMatch: u.inMatch,
+          inPreLobby: u.inPreLobby,
+          server: u.server,
+          latency: u.latency
+        }
+      });
+      console.log("USERRR: ");
+      console.log(user);
       if(!user){
         throw new Error("Failed to initialize user");
       }
@@ -319,10 +445,11 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Executes asynchronously after the chat instance becomes available.
   */
   useEffect(() => {
+    console.log("Initializing Users");
     const initializeUsers = async () => {
       if (chat) {
         await getAllUsers();
-        organizeUsersIntoSkillBuckets();
+        await startWatchChannel();
       }
     };
 
@@ -334,7 +461,12 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       value={{
         chat,
         matchMakingUsers,
-        simulateUsers
+        skillBuckets,
+        recentMatchedUsers,
+        userStatusMap,
+        logs,
+        simulateUsers,
+        generateUsers
       }}
     >
     {children}

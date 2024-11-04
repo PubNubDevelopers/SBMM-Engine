@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SBMContextProvider } from "../context/SBMContext";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,7 +17,9 @@ export default function RootLayout({
       <body
         className={`antialiased`}
       >
-        {children}
+        <SBMContextProvider>
+          {children}
+        </SBMContextProvider>
       </body>
     </html>
   );
