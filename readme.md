@@ -16,8 +16,6 @@ This project focuses on creating a **Skill-Based Matchmaking (SBMM)** system for
 - **Dynamic K-Factor for ELO Calculations**: The ELO rating system dynamically adjusts how quickly player ratings change based on their current rating.
 - **Modular Structure**: The system is designed for easy expansion with a clear separation of logic, ensuring that additional features like API integration can be added later.
 
-
-
 ## Folder Structure
 
 /multiplayer-matchmaking </br>

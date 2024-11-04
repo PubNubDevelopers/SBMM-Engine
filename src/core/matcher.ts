@@ -1,6 +1,6 @@
 import { Channel, Membership, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../utils/pubnub";
-import { pairMembersWithLatencyAndSkill } from "./sbm";
+import { pairMembersBySkill } from "./sbm";
 
 const serverID = "server"
 
@@ -14,10 +14,9 @@ const serverID = "server"
  * @param members - List of players or users to be paired for matchmaking.
  * @param latencyMap - A map of latencies between the users.
  */
-export async function processMatchMaking(members: any[], latencyMap: Map<string, Map<string, number>>) {
-  console.log("Latency Map: ", latencyMap);
+export async function processMatchMaking(members: any[]) {
   // Pair members using the latency and skill-based matchmaking algorithm
-  const pairs = pairMembersWithLatencyAndSkill(members, latencyMap);
+  const pairs = pairMembersBySkill(members);
 
   // Iterate over each pair of players
   for (const [player1, player2] of pairs) {
@@ -139,6 +138,7 @@ async function createPreLobbyListener(player1: User, player2: User) {
   const result = await Promise.race([confirmationPromise, confirmationTimeout]);
 
   if (result === 'confirmed') {
+    console.log("Both Have Confirmed Creating a Channel Lobby");
     // Create a game lobby if both players confirm
     await createChannelLobby(player1, player2, preLobbyChannel);
   } else if (result === 'timeout') {
@@ -174,7 +174,7 @@ async function updatePlayerMetadata(user: User, newCustomData: any) {
 
     // Merge existing custom data with new custom fields
     const updatedCustomData = {
-      ...userMetadata.custom, // Existing data
+      ...userMetadata, // Existing data
       ...newCustomData        // New data to update
     };
 
@@ -182,8 +182,6 @@ async function updatePlayerMetadata(user: User, newCustomData: any) {
     await user.update({
       custom: updatedCustomData, // Merged data
     });
-
-    console.log(`Player metadata updated for ${user.id} with data:`, updatedCustomData);
   } catch (error) {
     console.error(`Error updating metadata for user ${user.id}:`, error);
   }

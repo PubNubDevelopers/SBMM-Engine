@@ -40,10 +40,10 @@ export async function startMatchmaking() {
       if (members.length >= 2) {
         let matchID: string = generateMatchID();
 
-        let matchChannel: Channel = await createLatencyMapChannel(matchID);
+        // let matchChannel: Channel = await createLatencyMapChannel(matchID);
 
         // Start collecting latency maps (don't await here to avoid blocking the process)
-        const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
+        // const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
 
         // Inform each member that their matchmaking request is being processed
         for (const member of members) {
@@ -54,11 +54,8 @@ export async function startMatchmaking() {
           await notifyTestingClientUsersMatchmaking(userIds);
         }
 
-        // Wait for the latency maps to be collected asynchronously
-        const aggregatedLatencyMaps = await latencyMapPromise;
-
         // Now, process the matchmaking logic by passing in the members and latency maps
-        await processMatchMaking(members, aggregatedLatencyMaps);
+        await processMatchMaking(members);
       }
     }, MATCHMAKING_INTERVAL_MS); // Run matchmaking logic at the specified interval
   }
@@ -144,20 +141,20 @@ async function kickUserFromMatchmakingChannel(userId: string, regionChannelID: s
 }
 
 
-async function createLatencyMapChannel(matchID: string): Promise<Channel> {
-  const chat = await getPubNubChatInstance(serverID);
+// async function createLatencyMapChannel(matchID: string): Promise<Channel> {
+//   const chat = await getPubNubChatInstance(serverID);
 
-  let channel = await chat.getChannel(`${matchID}-latency-channel`);
+//   let channel = await chat.getChannel(`${matchID}-latency-channel`);
 
-  if(channel === null){
-    // If the channel doesn't exist, create a new one
-    channel = await chat.createPublicConversation({
-      channelId: `${matchID}-latency-channel`
-    });
-  }
+//   if(channel === null){
+//     // If the channel doesn't exist, create a new one
+//     channel = await chat.createPublicConversation({
+//       channelId: `${matchID}-latency-channel`
+//     });
+//   }
 
-  return channel;
-}
+//   return channel;
+// }
 
 
 /**
@@ -166,36 +163,36 @@ async function createLatencyMapChannel(matchID: string): Promise<Channel> {
  * @param matchChannel - The channel to listen for latency maps
  * @returns A Promise that resolves to the aggregated latency maps for all users as a Map<string, number>
  */
-async function receiveMatchmakingLatencyMaps(matchChannel: Channel): Promise<Map<string, Map<string, number>>> {
-  // Map to store the latency maps for each user
-  const aggregatedLatencyMaps: Map<string, Map<string, number>> = new Map();
+// async function receiveMatchmakingLatencyMaps(matchChannel: Channel): Promise<Map<string, Map<string, number>>> {
+//   // Map to store the latency maps for each user
+//   const aggregatedLatencyMaps: Map<string, Map<string, number>> = new Map();
 
-  // Listen for messages from the matchChannel
-  matchChannel.join(async (message: Message) => {
-    try {
-      // Parse the incoming message as JSON
-      const parsedMessage = JSON.parse(message.content.text);
+//   // Listen for messages from the matchChannel
+//   matchChannel.join(async (message: Message) => {
+//     try {
+//       // Parse the incoming message as JSON
+//       const parsedMessage = JSON.parse(message.content.text);
 
-      // Ensure the message contains a latency map
-      if (parsedMessage.latencyMap) {
-        if(!aggregatedLatencyMaps.has(message.userId)){
-          aggregatedLatencyMaps.set(message.userId, new Map<string, number>());
-        }
-        // Store the latency map for the user, assuming latencyMap is a single number per user
-        aggregatedLatencyMaps.set(message.userId, parsedMessage.latencyMap);
-        console.log(`Received latency map from user ${message.userId}`);
-      }
-    } catch (error) {
-      console.error("Error parsing message or storing latency map:", error);
-    }
-  });
+//       // Ensure the message contains a latency map
+//       if (parsedMessage.latencyMap) {
+//         if(!aggregatedLatencyMaps.has(message.userId)){
+//           aggregatedLatencyMaps.set(message.userId, new Map<string, number>());
+//         }
+//         // Store the latency map for the user, assuming latencyMap is a single number per user
+//         aggregatedLatencyMaps.set(message.userId, parsedMessage.latencyMap);
+//         console.log(`Received latency map from user ${message.userId}`);
+//       }
+//     } catch (error) {
+//       console.error("Error parsing message or storing latency map:", error);
+//     }
+//   });
 
-  // Wait for 1 second to collect all latency maps
-  await new Promise(resolve => setTimeout(resolve, 1000));
+//   // Wait for 1 second to collect all latency maps
+//   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // Return the aggregated latency maps after the timeout
-  return aggregatedLatencyMaps;
-}
+//   // Return the aggregated latency maps after the timeout
+//   return aggregatedLatencyMaps;
+// }
 
 // Utility function to generate a random match ID
 function generateMatchID(): string {
@@ -203,6 +200,8 @@ function generateMatchID(): string {
 }
 
 // Testing Server to Client Functions
+
+
 async function notifyTestingClientUsersMatchmaking(userIds: string[]){
   const chat = await getPubNubChatInstance(serverID);
 

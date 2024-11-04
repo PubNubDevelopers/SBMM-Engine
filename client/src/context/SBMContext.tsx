@@ -151,10 +151,8 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       // Only update if there are fields that were missing and set in updatedData
       if (needsUpdate) {
         try {
-          console.log(`Attempting to update user (ID: ${user.id}) with data:`, JSON.stringify(updatedData, null, 2));
           const updatedUser = await user.update(updatedData);
           allUsers.push(updatedUser);
-          console.log(`Updated user data returned from PubNub for user ID ${user.id}:`, JSON.stringify(updatedUser, null, 2));
         } catch (error) {
           console.error(`Failed to update user ${user.name} (ID: ${user.id}):`, error);
         }
@@ -203,25 +201,30 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-  * Simulates users by selecting a specified count from a JSON file.
+  * Simulates users by selecting a specified count from the allUsers state.
   * Shuffles the selected users randomly before initiating a simulation for each.
   * Uses createUser to set up each user and waits for all simulations to complete.
   */
   const simulateUsers = async (count: number) => {
-    const users = userJson.users.slice(0, count);
+    // Select the first `count` users from allUsers
+    const users = allUsers.slice(0, count);
+
+    // Shuffle the selected users randomly
     for (let i = users.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
       [users[i], users[j]] = [users[j], users[i]]; // Swap elements
     }
-    const usersPromises = users.map(async (jsonUser) => {
-      const user: User | undefined = await createUser(jsonUser);
-      if(user){
-        await simulateUser('us-east-1', user.id);
-      }
-    }
-  );
 
-    await Promise.all(usersPromises); // Wait for all simulations to complete
+    console.log("Simulating Users: ");
+    // Map each user to a simulation promise
+    const usersPromises = users.map(async (user) => {
+      console.log(user.name);
+      // Check if user already exists, otherwise create and simulate
+      await simulateUser('us-east-1', user.id);
+    });
+
+    // Wait for all simulations to complete
+    await Promise.all(usersPromises);
   };
 
 
@@ -328,8 +331,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Maintains recentMatchedUsers state with the latest matched users.
   */
   const startWatchChannel = async () => {
+    console.log("Start watch channel");
     // Ensure chat instance is defined before attempting to watch channel
     if (chat) {
+      console.log("init watch channel");
       const watchChannelID = `Matchmaking-In-Progress-Client-Testing`;
       let watchChannel = await chat.getChannel(watchChannelID);
 
@@ -341,8 +346,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
+      console.log(watchChannel);
+
       // Listen for incoming messages on the matchmaking channel
-      watchChannel.join((message: Message) => {
+      watchChannel.join(async (message: Message) => {
         let parsedMessage: any;
         try {
           // Attempt to parse the message content as JSON
@@ -352,6 +359,8 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
           console.log("Error parsing message: ", error);
           return;
         }
+
+        console.log(parsedMessage);
 
         // Extract user IDs and single user ID from the parsed message
         const userIds: string[] = parsedMessage.matchedUsers || [];
@@ -401,8 +410,21 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
               // Update recentMatchedUsers with only the most recent matched users
               const matchedUsers = userIds.map(id => allUsers.find(user => user.id === id)).filter(Boolean) as User[];
+              console.log("Matched Users length: ");
+              console.log(matchedUsers.length);
               if (matchedUsers.length === 2) {
+                console.log("Setting Recent Matched Users");
                 setRecentMatchedUsers(matchedUsers);
+              }
+              else if(userIds.length == 2){
+                const player1: User | null = await chat.getUser(userIds[0]);
+                const player2: User | null = await chat.getUser(userIds[1]);
+                if(player1 && player2){
+                  setRecentMatchedUsers([player1, player2]);
+                }
+                else{
+                  console.log("Error Finding Users to set recentMatchedUsers");
+                }
               }
             } else {
               // Log an error if the matched users array does not contain exactly two users
