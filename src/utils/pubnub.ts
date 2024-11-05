@@ -25,8 +25,8 @@ export const getPubNubChatInstance = async (userId: string): Promise<Chat> => {
 
 export const getWebPubNubChatInstance = async (userId: string): Promise<Chat> => {
   const chat: Chat = await Chat.init({
-    publishKey: "pub-c-e8780ff9-1dfe-4317-91c7-ef63da4034ce",
-    subscribeKey: "sub-c-e06a091a-a2d5-4030-9ab6-678a4cd68172",
+    publishKey: process.env.NEXT_PUBLIC_PUBLISH_KEY,
+    subscribeKey: process.env.NEXT_PUBLIC_SUBSCRIBE_KEY,
     userId: userId
   });
 

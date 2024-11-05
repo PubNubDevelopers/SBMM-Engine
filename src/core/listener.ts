@@ -30,32 +30,37 @@ export async function startMatchmaking() {
     // Set up an interval to repeatedly run the matchmaking logic for this region
     setInterval(async () => {
 
-      // Fetch members from the region-specific matchmaking channel
-      const members: Membership[] = await getChannelMembers(regionChannel);
+      try{
+        // Fetch members from the region-specific matchmaking channel
+        const members: Membership[] = await getChannelMembers(regionChannel);
 
-      // Convert Membership[] to a list of user IDs (strings)
-      const userIds: string[] = members.map(member => member.user.id);
+        // Convert Membership[] to a list of user IDs (strings)
+        const userIds: string[] = members.map(member => member.user.id);
 
-      // If there are at least 2 members, proceed with matchmaking
-      if (members.length >= 2) {
-        let matchID: string = generateMatchID();
+        // If there are at least 2 members, proceed with matchmaking
+        if (members.length >= 2) {
+          let matchID: string = generateMatchID();
 
-        // let matchChannel: Channel = await createLatencyMapChannel(matchID);
+          // let matchChannel: Channel = await createLatencyMapChannel(matchID);
 
-        // Start collecting latency maps (don't await here to avoid blocking the process)
-        // const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
+          // Start collecting latency maps (don't await here to avoid blocking the process)
+          // const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
 
-        // Inform each member that their matchmaking request is being processed
-        for (const member of members) {
-          const userId = member.user.id;
-          await kickUserFromMatchmakingChannel(userId, regionChannelID); // Remove the user from the matchmaking channel
-          await notifyClientMatchmakingStarted(userId, userIds, matchID); // Notify the user that their matchmaking request is being processed
-          // Notify web client for testing purposes
-          await notifyTestingClientUsersMatchmaking(userIds);
+          // Inform each member that their matchmaking request is being processed
+          for (const member of members) {
+            const userId = member.user.id;
+            await kickUserFromMatchmakingChannel(userId, regionChannelID); // Remove the user from the matchmaking channel
+            await notifyClientMatchmakingStarted(userId, userIds, matchID); // Notify the user that their matchmaking request is being processed
+            // Notify web client for testing purposes
+            await notifyTestingClientUsersMatchmaking(userIds);
+          }
+
+          // Now, process the matchmaking logic by passing in the members and latency maps
+          await processMatchMaking(members);
         }
-
-        // Now, process the matchmaking logic by passing in the members and latency maps
-        await processMatchMaking(members);
+      }
+      catch(e){
+        console.log("Request Failed Trying Again");
       }
     }, MATCHMAKING_INTERVAL_MS); // Run matchmaking logic at the specified interval
   }
