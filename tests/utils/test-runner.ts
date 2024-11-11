@@ -37,13 +37,12 @@ export async function simulateMatchmakingUsers() {
  * @param userIndex - The index number of the user being simulated
  */
 export async function simulateUser(region: string, userID: string) {
-  console.log("Simulate single user request received");
   // Create a progress bar for this user
   const chat: Chat = await getWebPubNubChatInstance(userID); // Get a new instance of a random user
-  console.log("Has Chat");
   const user: User = chat.currentUser; // Fetch the current user for the chat instance
   let personalChannelID: string = `Matchmaking-In-Progress-${user.id}`;
   let gameLobbyChannelID: string | undefined; // To store the game lobby ID if received
+  let joinedPreLobby = false;
 
   /**
    * Join the pre-lobby channel and listen for updates
@@ -93,6 +92,7 @@ export async function simulateUser(region: string, userID: string) {
 
       // Handle pre-lobby messages (whether as JSON or plain text)
       if (parsedMessage.message && parsedMessage.message.startsWith("pre-lobby-")) {
+        console.log("Received Pre-Lobby Joining request for user: ", user.id);
         // If the message contains a pre-lobby channel ID
         const preLobbyChannelID = parsedMessage.message; // Save the pre-lobby channel ID
 
@@ -101,16 +101,15 @@ export async function simulateUser(region: string, userID: string) {
         if (preLobbyChannel === null) {
           throw new Error("Error finding pre-lobby channel"); // Throw error if the channel cannot be found
         }
-
-        await joinPreLobby(preLobbyChannel); // Join the pre-lobby
-        await simulateJoiningLobby(preLobbyChannel); // Simulate the user joining the pre-lobby
+        if(!joinedPreLobby){
+          joinedPreLobby = true;
+          await joinPreLobby(preLobbyChannel); // Join the pre-lobby
+          console.log("Confirming match for: ", userID);
+          await simulateJoiningLobby(preLobbyChannel); // Simulate the user joining the pre-lobby
+        }
       } else if (parsedMessage.message === `Processing`) {
-        // If the message indicates that the matchmaking is in progress
-        const matchedUsers: string[] = parsedMessage.matchedUsers as string[];
-        const matchID: string = parsedMessage.matchID as string;
         await stopMatchmakingRequest(region, chat); // Stop the matchmaking request
       } else if (parsedMessage.message === `TIMEOUT`) {
-        // If the message indicates a timeout
         await stopMatchmakingRequest(region, chat); // Stop the matchmaking request due to timeout
       }
     } catch (e) {
@@ -120,28 +119,6 @@ export async function simulateUser(region: string, userID: string) {
   });
 
   await startMatchmakingRequest(region, chat);
-}
-
-/**
- * Update the current user to specify region and skill level
- *
- * @param elo
- */
-async function updateCurrentUser(elo: number, user: User){
-  try{
-    const customData = user.custom || {};
-    // Specifies the new data we want to upload to the user
-    const newData = {
-      elo: elo
-    }
-    // This ensures no prior data is overwritten within AppContext
-    await user.update({
-      custom: { ...customData, ...newData }
-    });
-  }
-  catch(e){
-    console.log("Failed to update the current users elo rating within AppContext: ", e);
-  }
 }
 
 /**
@@ -195,43 +172,20 @@ async function stopMatchmakingRequest(region: string, chat: Chat) {
   }
 }
 
-async function sendLatencyMap(latencyMap: Map<string, number>, matchID: string, chat: Chat){
-  try{
-    // Find latency map channel
-    let channel = await chat.getChannel(`${matchID}-latency-channel`);
-
-    if(!channel){
-      throw new Error(`Can not find latency map channel at ID: ${matchID}-latency-channel`);
-    }
-
-    // Create a JSON object that includes the latencyMap
-    const parsedMessage = {
-      latencyMap: latencyMap
-    }
-
-    const jsonString = JSON.stringify(parsedMessage);
-
-    // Send the latency map
-    channel.sendText(jsonString);
-  }
-  catch(e){
-    console.log("Error sending letency map: ", e);
-  }
-}
-
 /**
  * Simulate a user joining a pre-lobby channel
  *
  * This function simulates a delay before a user joins the pre-lobby and sends a "match_confirmed" message.
  *
  * @param preLobbyChannel - The pre-lobby channel the user is joining
+ * @param callback - A function to execute after the "match_confirmed" message is sent
  */
 async function simulateJoiningLobby(preLobbyChannel: Channel) {
-  // Generate a random delay between 0 and 40 seconds
-  const randomDelay = Math.floor(Math.random() * 40000); // Time in milliseconds
+  // // Generate a random delay between 0 and 30 seconds
+  // const randomDelay = Math.floor(Math.random() * 10000); // Time in milliseconds
 
-  // Wait for the random amount of time before proceeding
-  await new Promise((resolve) => setTimeout(resolve, randomDelay));
+  // // Wait for the random amount of time before proceeding
+  // await new Promise((resolve) => setTimeout(resolve, randomDelay));
 
   // Send the "match_confirmed" message after the delay
   await preLobbyChannel.sendText("match_confirmed");

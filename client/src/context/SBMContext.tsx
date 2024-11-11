@@ -84,30 +84,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-  * Prints the data for a list of users, including name and custom attributes for each user.
-  */
-  const printUsersData = (users: User[]): void => {
-    users.forEach((user, index) => {
-      console.log(`\n--- User ${index + 1} ---`);
-      console.log(`User ID: ${user.id}`);
-      console.log(`Name: ${user.name || "No name available"}`);
-
-      if (user.custom) {
-        console.log("Custom Attributes:");
-        console.log(`  ELO: ${user.custom.elo !== undefined ? user.custom.elo : "Not set"}`);
-        console.log(`  Punished: ${user.custom.punished !== undefined ? user.custom.punished : "Not set"}`);
-        console.log(`  Confirmed: ${user.custom.confirmed !== undefined ? user.custom.confirmed : "Not set"}`);
-        console.log(`  In Match: ${user.custom.inMatch !== undefined ? user.custom.inMatch : "Not set"}`);
-        console.log(`  In Pre-Lobby: ${user.custom.inPreLobby !== undefined ? user.custom.inPreLobby : "Not set"}`);
-        console.log(`  Server: ${user.custom.server || "Not set"}`);
-        console.log(`  Latency: ${user.custom.latency !== undefined ? user.custom.latency : "Not set"}`);
-      } else {
-        console.log("Custom Attributes: None");
-      }
-    });
-  };
-
-  /*
   * Ensures each user has required fields by adding missing attributes without overwriting existing values
   * Returns a list of users that were updated
   */
@@ -209,12 +185,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
     // Select the first `count` users from allUsers
     const users = allUsers.slice(0, count);
 
-    // Shuffle the selected users randomly
-    for (let i = users.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
-      [users[i], users[j]] = [users[j], users[i]]; // Swap elements
-    }
-
     console.log("Simulating Users: ");
     // Map each user to a simulation promise
     const usersPromises = users.map(async (user) => {
@@ -226,7 +196,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
     // Wait for all simulations to complete
     await Promise.all(usersPromises);
   };
-
 
   /*
  * Generates an elo value with a long-tail distribution between 0 and 3000.
@@ -324,6 +293,25 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
     setLogs((prevLogs) => [...prevLogs, logMessage]); // Append new log entry to logs state
   };
 
+  const getUser = async (id: string) => {
+    if(chat){
+      let user: User | undefined | null = allUsers.find(user => user.id === id);
+      if(!user){
+        try{
+          user = await chat.getUser(id);
+        }
+        catch(e){
+          console.log("Failed to get user");
+        }
+      }
+      if(user){
+        return user;
+      }
+      return undefined;
+    }
+    return undefined;
+  }
+
   /*
   * Starts watching a designated matchmaking channel.
   * Listens for various event types, such as "Joining," "Matched," "Confirmed," "InMatch," and "Finished."
@@ -370,19 +358,42 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
         switch (parsedMessage.message) {
           case "Joining":
             // Update status to "Joining" for each user in matchedUsers array and log action
-            userIds.forEach(id => {
-              setUserStatusMap((prev) => new Map(prev).set(id, "Joining"));
-              logAction(`User ${id} is joining the matchmaking.`);
-            });
+            for(const id of userIds){
+              try{
+                const user: User | undefined = await getUser(id);
+                setUserStatusMap((prev) => new Map(prev).set(id, "Joining"));
+
+                if(user){
+                  logAction(`User ${user.name} is joining the matchmaking.`);
+                }
+                else{
+                  logAction(`User ${id} is joining the matchmaking.`);
+                }
+              }
+              catch(e){
+                console.error(`Error fetching user ${id}:`, e);
+              }
+            }
             break;
 
           case "Matched":
             // For "Matched" events, update status to "Matched" for each user and log action
             if (userIds.length === 2) {
-              userIds.forEach(id => {
-                setUserStatusMap((prev) => new Map(prev).set(id, "Matched"));
-                logAction(`User ${id} has been matched with another user.`);
-              });
+              for(const id of userIds){
+                try{
+                  const user: User | undefined = await getUser(id);
+                  setUserStatusMap((prev) => new Map(prev).set(id, "Matched"));
+                  if(user){
+                    logAction(`User ${user.name} has been matched with another user.`);
+                  }
+                  else{
+                    logAction(`User ${id} has been matched with another user.`);
+                  }
+                }
+                catch(e){
+                  console.error(`Error fetching user ${id}`, e);
+                }
+              }
             } else {
               // Log an error if the matched users array does not contain exactly two users
               console.log("Error receiving matched users for Matched: ", JSON.stringify(parsedMessage));
@@ -392,8 +403,19 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
           case "Confirmed":
              // For "Confirmed" events, update the status to "Confirmed" for the specified user
             if (userId) {
-              setUserStatusMap((prev) => new Map(prev).set(userId, "Confirmed"));
-              logAction(`User ${userId} has confirmed their match.`);
+              try{
+                const user: User | undefined = await getUser(userId);
+                setUserStatusMap((prev) => new Map(prev).set(userId, "Confirmed"));
+                if(user){
+                  logAction(`User ${user.name} has confirmed their match.`);
+                }
+                else{
+                  logAction(`User ${userId} has confirmed their match.`);
+                }
+              }
+              catch(e){
+                console.error(`Error fetching user ${userId}`, e);
+              }
             } else {
               // Log an error if no user ID is provided for confirmation
               console.log("Error receiving user confirmed: ", JSON.stringify(parsedMessage));
@@ -403,17 +425,20 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
           case "InMatch":
             // For "InMatch" events, update status to "InMatch" for both users and log action
             if (userIds.length === 2) {
-              userIds.forEach(id => {
+              for(const id of userIds){
+                const user: User | undefined = await getUser(id);
                 setUserStatusMap((prev) => new Map(prev).set(id, "InMatch"));
-                logAction(`User ${id} is now in a match.`);
-              });
+                if(user){
+                  logAction(`User ${user.name} is now in a match.`);
+                }
+                else{
+                  logAction(`User ${id} is now in a match.`);
+                }
+              }
 
               // Update recentMatchedUsers with only the most recent matched users
               const matchedUsers = userIds.map(id => allUsers.find(user => user.id === id)).filter(Boolean) as User[];
-              console.log("Matched Users length: ");
-              console.log(matchedUsers.length);
               if (matchedUsers.length === 2) {
-                console.log("Setting Recent Matched Users");
                 setRecentMatchedUsers(matchedUsers);
               }
               else if(userIds.length == 2){
@@ -436,8 +461,14 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
             // For "Finished" events, update status to "Finished" for each user and log action
             if (userIds.length > 0) {
               userIds.forEach(id => {
+                const user: User | undefined = allUsers.find(user => user.id === id);
                 setUserStatusMap((prev) => new Map(prev).set(id, "Finished"));
-                logAction(`User ${id}'s match has finished.`);
+                if(user){
+                  logAction(`User ${user.name} match has finished.`);
+                }
+                else{
+                  logAction(`User ${id}'s match has finished.`);
+                }
               });
             }
             break;
@@ -451,6 +482,8 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       console.log("Error watching matchmaking channel: Chat is not defined");
     }
   };
+
+
 
   /*
   * Initializes the chat instance when the component mounts if not already set up.

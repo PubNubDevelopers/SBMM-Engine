@@ -39,38 +39,43 @@ export async function processMatchMaking(members: any[]) {
  * @param player2Id - The ID of the second player.
  */
 async function notifyClientsOfSharedMatchmakingChannel(player1Id: string, player2Id: string) {
-  // Wait 3s
-  const waitTime = 3000;
-  // Simulate network delay (1 second) before proceeding
-  await new Promise(resolve => setTimeout(resolve, waitTime));
+  try{
+    // Wait 3s
+    const waitTime = 3000;
+    // Simulate network delay (1 second) before proceeding
+    await new Promise(resolve => setTimeout(resolve, waitTime));
 
-  const chat = await getPubNubChatInstance(serverID);
+    const chat = await getPubNubChatInstance(serverID);
 
-  // Check if the channels exist for each player, if not create them
-  let channel1 = await chat.getChannel(`Matchmaking-In-Progress-${player1Id}`);
-  let channel2 = await chat.getChannel(`Matchmaking-In-Progress-${player2Id}`);
+    // Check if the channels exist for each player, if not create them
+    let channel1 = await chat.getChannel(`Matchmaking-In-Progress-${player1Id}`);
+    let channel2 = await chat.getChannel(`Matchmaking-In-Progress-${player2Id}`);
 
-  if (channel1 === null) {
-    channel1 = await chat.createPublicConversation({
-      channelId: `Matchmaking-In-Progress-${player1Id}`
-    });
+    if (channel1 === null) {
+      channel1 = await chat.createPublicConversation({
+        channelId: `Matchmaking-In-Progress-${player1Id}`
+      });
+    }
+
+    if (channel2 === null) {
+      channel2 = await chat.createPublicConversation({
+        channelId: `Matchmaking-In-Progress-${player2Id}`
+      });
+    }
+
+    // Create a shared lobby ID for both players
+    const sharedLobbyID = `pre-lobby-${player1Id}-${player2Id}`;
+
+    console.log("Sending Text for shared lobby");
+    // Notify both players of the shared matchmaking channel
+    await channel1.sendText(sharedLobbyID);
+    await channel2.sendText(sharedLobbyID);
+
+    console.log(`Notified user ${player1Id} and ${player2Id} that their matchmaking request is being processed.`);
   }
-
-  if (channel2 === null) {
-    channel2 = await chat.createPublicConversation({
-      channelId: `Matchmaking-In-Progress-${player2Id}`
-    });
+  catch(e){
+    console.error(`Failed to notify clients of pre lobby listener: `, e);
   }
-
-  // Create a shared lobby ID for both players
-  const sharedLobbyID = `pre-lobby-${player1Id}-${player2Id}`;
-
-  console.log("Sending Text for shared lobby");
-  // Notify both players of the shared matchmaking channel
-  await channel1.sendText(sharedLobbyID);
-  await channel2.sendText(sharedLobbyID);
-
-  console.log(`Notified user ${player1Id} and ${player2Id} that their matchmaking request is being processed.`);
 }
 
 /**
@@ -118,12 +123,10 @@ async function createPreLobbyListener(player1: User, player2: User) {
         // Mark player as confirmed and update their metadata
         if (userId === player1.id) {
           player1Confirmed = true;
-          await updatePlayerMetadata(player1, { confirmed: true });
         }
 
         if (userId === player2.id) {
           player2Confirmed = true;
-          await updatePlayerMetadata(player2, { confirmed: true });
         }
 
         // If both players confirm, resolve the promise

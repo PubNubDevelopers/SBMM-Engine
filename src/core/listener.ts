@@ -3,8 +3,17 @@ import { getPubNubChatInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
 
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval (in milliseconds) to run the matchmaking process
-const regions = ['us-east-1', 'us-west-1', 'eu-central-1', 'ap-southeast-1']; // Defined regions for matchmaking
+let regionChannelID = 'matchmaking-us-east-1';
 const serverID = "server";
+
+// A queue to hold users waiting to be processed
+const matchmakingQueue: Membership[] = [];
+
+// Array to track user IDs currently being processed
+let processingUserIds: string[] = [];
+
+// Flag to indicate if the queue is currently being processed
+let isProcessingQueue = false;
 
 /**
  * Start the matchmaking process loop
@@ -16,53 +25,69 @@ const serverID = "server";
 export async function startMatchmaking() {
   const chat = await getPubNubChatInstance(serverID);
 
-  // Iterate over all defined regions
-  for (const region of regions) {
-    const regionChannelID = `matchmaking-${region}`; // Region-based matchmaking channel ID
-    let regionChannel = await chat.getChannel(regionChannelID); // Get the channel for this region
+  // Set up an interval to repeatedly run the matchmaking logic for this region
+  setInterval(async () => {
+    try{
+      let regionChannel = await chat.getChannel(regionChannelID); // Get the channel for this region
 
-    // If the channel doesn't exist, create it
-    if (!regionChannel) {
-      regionChannel = await chat.createPublicConversation({ channelId: regionChannelID });
-      console.log(`Created channel: ${regionChannelID}`);
+      // If the channel doesn't exist, create it
+      if (!regionChannel) {
+        regionChannel = await chat.createPublicConversation({ channelId: regionChannelID });
+      }
+
+      // Fetch members from the matchmaking channel
+      const members: Membership[] = await getChannelMembers(regionChannel);
+
+      // Add members to matchmaking queue
+      await enqueueMatchmakingUsers(members);
+
+      // Process matchmaking queue
+      await processMatchmakingQueue();
+    }
+    catch(e){
+      console.log("Request Failed Trying Again");
+    }
+  }, MATCHMAKING_INTERVAL_MS); // Run matchmaking logic at the specified interval
+}
+
+// Enqueue members for matchmaking
+async function enqueueMatchmakingUsers(members: Membership[]) {
+  for (const member of members) {
+    if (!processingUserIds.includes(member.user.id)) {
+      matchmakingQueue.push(member);
+      processingUserIds.push(member.user.id);
+    }
+  }
+}
+
+// Process users in the matchmaking queue
+async function processMatchmakingQueue() {
+  if (isProcessingQueue || matchmakingQueue.length < 2) return;
+  isProcessingQueue = true;
+
+  try {
+    // Extract users from the queue for processing
+    const usersToProcess: Membership[] = matchmakingQueue.splice(0, matchmakingQueue.length);
+    const userIds = usersToProcess.map((member) => member.user.id);
+
+    for (const member of usersToProcess) {
+      const userId = member.user.id;
+      await kickUserFromMatchmakingChannel(userId, regionChannelID); // Remove user from matchmaking channel
+      await notifyClientMatchmakingStarted(userId, userIds); // Notify the user
     }
 
-    // Set up an interval to repeatedly run the matchmaking logic for this region
-    setInterval(async () => {
+    // Notify web client for testing purposes
+    await notifyTestingClientUsersMatchmaking(userIds);
 
-      try{
-        // Fetch members from the region-specific matchmaking channel
-        const members: Membership[] = await getChannelMembers(regionChannel);
+    // Run matchmaking logic on extracted users
+    await processMatchMaking(usersToProcess);
 
-        // Convert Membership[] to a list of user IDs (strings)
-        const userIds: string[] = members.map(member => member.user.id);
-
-        // If there are at least 2 members, proceed with matchmaking
-        if (members.length >= 2) {
-          let matchID: string = generateMatchID();
-
-          // let matchChannel: Channel = await createLatencyMapChannel(matchID);
-
-          // Start collecting latency maps (don't await here to avoid blocking the process)
-          // const latencyMapPromise = receiveMatchmakingLatencyMaps(matchChannel);
-
-          // Inform each member that their matchmaking request is being processed
-          for (const member of members) {
-            const userId = member.user.id;
-            await kickUserFromMatchmakingChannel(userId, regionChannelID); // Remove the user from the matchmaking channel
-            await notifyClientMatchmakingStarted(userId, userIds, matchID); // Notify the user that their matchmaking request is being processed
-            // Notify web client for testing purposes
-            await notifyTestingClientUsersMatchmaking(userIds);
-          }
-
-          // Now, process the matchmaking logic by passing in the members and latency maps
-          await processMatchMaking(members);
-        }
-      }
-      catch(e){
-        console.log("Request Failed Trying Again");
-      }
-    }, MATCHMAKING_INTERVAL_MS); // Run matchmaking logic at the specified interval
+    // Clear processed user IDs from processing list
+    processingUserIds = processingUserIds.filter((id) => !userIds.includes(id));
+  } catch (error) {
+    console.log("Error processing matchmaking queue:", error);
+  } finally {
+    isProcessingQueue = false;
   }
 }
 
@@ -79,7 +104,6 @@ async function getChannelMembers(channel: Channel): Promise<any[]> {
   const result = await channel.getMembers({
     limit: 100
   });
-  console.log(`Found ${result.total} members in the channel.`);
 
   return result.members;
 }
@@ -93,7 +117,7 @@ async function getChannelMembers(channel: Channel): Promise<any[]> {
  * @param userId - The ID of the user to notify.
  * @param userIds - A list of other user IDs involved in the matchmaking process.
  */
-async function notifyClientMatchmakingStarted(userId: string, userIds: string[], matchID: string) {
+async function notifyClientMatchmakingStarted(userId: string, userIds: string[]) {
   const chat = await getPubNubChatInstance(serverID);
 
   // Get or create the user's matchmaking channel
@@ -109,7 +133,6 @@ async function notifyClientMatchmakingStarted(userId: string, userIds: string[],
   // Create a JSON object that includes the list of user IDs
   const messagePayload = {
     message: "Processing",
-    matchID: matchID,
     matchedUsers: userIds
   };
 
@@ -118,8 +141,6 @@ async function notifyClientMatchmakingStarted(userId: string, userIds: string[],
 
   // Notify the client that their matchmaking request is being processed with the list of users as JSON
   await channel.sendText(jsonString);
-
-  console.log(`Notified user ${userId} with the following JSON: ${jsonString}`);
 }
 
 /**
@@ -229,6 +250,4 @@ async function notifyTestingClientUsersMatchmaking(userIds: string[]){
   const jsonString = JSON.stringify(messagePayload);
 
   await channel.sendText(jsonString);
-
-  console.log(`Notified user client with the following JSON: ${jsonString}`);
 }
