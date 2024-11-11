@@ -8,6 +8,10 @@ This project focuses on creating a **Skill-Based Matchmaking (SBMM)** system for
 
 ![Alt text](assets/sbm.drawio.png)
 
+## Client Application Overview
+
+![Alt text](assets/client.screenshot.png)
+
 ## Key Features
 
 - **Skill-Based Matchmaking (SBMM)**: Players are matched based on their ELO ratings using the Hungarian algorithm for the most cost-optimal solution.
@@ -25,7 +29,7 @@ This project focuses on creating a **Skill-Based Matchmaking (SBMM)** system for
 │&nbsp;&nbsp;&nbsp;|--- /core            # Core matchmaking logic (main orchestrators, algorithms)</br>
 │&nbsp;&nbsp;&nbsp;|--- /services        # Supporting services (player and queue management)</br>
 │&nbsp;&nbsp;&nbsp;|--- /models          # Models representing players, lobbies, etc.</br>
-│&nbsp;&nbsp;&nbsp;|--- /utils           # Utility functions (ELO calculations, etc.)</br>
+│&nbsp;&nbsp;&nbsp;|--- /utils           # Utility functions (PubNub Functions, Error handling, etc.)</br>
 │&nbsp;&nbsp;&nbsp;|--- /workers         # Background workers for matchmaking tasks</br>
 │</br>
 |-- /docker              # Docker configuration for containerization</br>
@@ -54,20 +58,53 @@ To run the project locally, you’ll need:
   cd multiplayer-matchmaking
   ```
 
-2. Install the dependencies:
+2. Install the dependencies for the server:
 
   ```bash
   npm install
   ```
 
+3. Install the dependecies for the client:
+
+  ```bash
+  cd client
+  npm install
+  ```
+
 3. Set up your .env file with PubNub credentials and other configuration settings:
 
+  Main Directory (.env)
+
   ```
-  PUBNUB_PUBLISH_KEY=your-publish-key
-  PUBNUB_SUBSCRIBE_KEY=your-subscribe-key
+  PUBLISH_KEY=your-publish-key
+  SUBSCRIBE_KEY=your-subscribe-key
+  SECRET_KEY=your-secret-key
   ```
 
-4.	(Optional) If you want to run the project in a Docker container:
+  ./client Directory (.env)
+
+  ```
+  PUBLISH_KEY=your-publish-key
+  SUBSCRIBE_KEY=your-subscribe-key
+  ```
+
+4. Start the server
+
+  In the Main Directory
+
+  ```bash
+  npm run build
+  npm run start
+  ```
+
+5. Start the client
+
+  ```bash
+  cd client
+  npm run dev
+  ```
+
+6.	(Optional) If you want to run the project in a Docker container:
 
   ```bash
   docker-compose up --build

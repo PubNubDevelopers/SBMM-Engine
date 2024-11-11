@@ -1,7 +1,7 @@
 "use client"
 
 import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { simulateUser } from '../../../tests/utils/test-runner';
 import userJson from "../user.json";
 import { generateUsername } from "unique-username-generator";
@@ -42,6 +42,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [recentMatchedUsers, setRecentMatchedUsers] = useState<User[]>([]);
   const [userStatusMap, setUserStatusMap] = useState<Map<string, string>>(new Map());
   const [logs, setLogs] = useState<string[]>([]);
+  const userStatusMapRef = useRef<Map<string, string>>(new Map()); // Use useRef for userStatusMap
 
   /*
   * Initializes the PubNub Chat instance.
@@ -79,6 +80,14 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
       console.log(users.length);
       setAllUsers(users);
+      // Initialize userStatusMap with each user set to "Finished" using useRef
+      userStatusMapRef.current = new Map();
+      users.forEach((user) => {
+        userStatusMapRef.current.set(user.id, "Finished");
+      });
+
+      // Optionally, if you need to trigger a render based on this initialization
+      setUserStatusMap(new Map(userStatusMapRef.current));
       organizeUsersIntoSkillBuckets(users);
     }
   };
@@ -95,6 +104,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
       const updatedData: {
         name?: string;
+        profileUrl?: string;
         custom: {
           elo: number;
           punished: boolean;
@@ -103,6 +113,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
           inPreLobby: boolean;
           server: string;
           latency: number;
+          searching: boolean;
         };
       } = { custom: {} as any };  // Initialize custom to ensure it is always defined
 
@@ -110,18 +121,28 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       if (!user.name || /^\d/.test(user.name)) {
         updatedData.name = generateUsername();
         needsUpdate = true;
-        console.log(`Generated name for user (ID: ${user.id}): ${updatedData.name}`);
       }
 
-      // Set each field in updatedData.custom, and mark needsUpdate as true if any field is missing
+      if(!user.profileUrl){
+        const randomNumber = Math.floor(Math.random() * 6) + 1;
+        updatedData.profileUrl = `/assets/Avatar${randomNumber}.png`;
+        needsUpdate = true;
+      }
+
+      // Set each field in updatedData.custom, and mark needsUpdate as true if any field is missing or needs modification
       updatedData.custom = {
         elo: user.custom?.elo ?? (() => { needsUpdate = true; return generateLongTailElo(); })(),
         punished: user.custom?.punished ?? (() => { needsUpdate = true; return false; })(),
-        confirmed: user.custom?.confirmed ?? (() => { needsUpdate = true; return false; })(),
+        confirmed: (user.custom?.confirmed === null || user.custom?.confirmed === true)
+          ? (() => { needsUpdate = true; return false; })()
+          : user.custom?.confirmed,
         inMatch: user.custom?.inMatch ?? (() => { needsUpdate = true; return false; })(),
         inPreLobby: user.custom?.inPreLobby ?? (() => { needsUpdate = true; return false; })(),
         server: user.custom?.server ?? (() => { needsUpdate = true; return 'us-east-1'; })(),
-        latency: user.custom?.latency ?? (() => { needsUpdate = true; return Math.floor(Math.random() * 100) + 20; })()
+        latency: user.custom?.latency ?? (() => { needsUpdate = true; return Math.floor(Math.random() * 100) + 20; })(),
+        searching: (user.custom?.searching === null || user.custom?.searching === true)
+          ? (() => { needsUpdate = true; return false; })()
+          : user.custom?.searching,
       };
 
       // Only update if there are fields that were missing and set in updatedData
@@ -198,6 +219,37 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
+ * Organically simulates matchmaking for users one at a time over time.
+ * Only users not in `userStatusMap` or with a "Finished" status are simulated.
+ */
+  const organicallySimulateMatchmaking = () => {
+    const getEligibleUser = () => {
+      for (let [userId, status] of userStatusMapRef.current) {
+        if (status === "Finished") {
+          return { id: userId }; // Return user object with only the ID if available
+        }
+      }
+      return null; // No eligible users found
+    };
+
+    // Run matchmaking at regular intervals
+    const intervalId = setInterval(async () => {
+      const eligibleUser = getEligibleUser();
+      console.log(eligibleUser);
+
+      if (eligibleUser) {
+        userStatusMapRef.current.set(eligibleUser.id, "Joining");
+        setUserStatusMap(new Map(userStatusMapRef.current)); // Update UI if needed
+        await simulateUser('us-east-1', eligibleUser.id);
+      } else {
+        console.log("No eligible users for simulation at this time.");
+      }
+    }, Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000); // Random delay
+
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+  };
+
+  /*
  * Generates an elo value with a long-tail distribution between 0 and 3000.
  * The result is skewed towards lower values, with fewer high-end values.
  */
@@ -238,7 +290,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
     // Update the allUsers state by appending the new users
     setAllUsers((prevAllUsers) => [...prevAllUsers, ...users]);
-
     // Organize the new users into skill buckets
     organizeUsersIntoSkillBuckets(users);
   };
@@ -361,7 +412,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
             for(const id of userIds){
               try{
                 const user: User | undefined = await getUser(id);
-                setUserStatusMap((prev) => new Map(prev).set(id, "Joining"));
+                // Set user status to "Joining" in the status map using useRef
+                userStatusMapRef.current.set(id, "Joining");
+                // Optionally trigger a re-render if the UI needs to reflect this status change
+                setUserStatusMap(new Map(userStatusMapRef.current));
 
                 if(user){
                   logAction(`User ${user.name} is joining the matchmaking.`);
@@ -382,7 +436,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
               for(const id of userIds){
                 try{
                   const user: User | undefined = await getUser(id);
-                  setUserStatusMap((prev) => new Map(prev).set(id, "Matched"));
+                  // Set user status to "Joining" in the status map using useRef
+                  userStatusMapRef.current.set(id, "Matched");
+                  // Optionally trigger a re-render if the UI needs to reflect this status change
+                  setUserStatusMap(new Map(userStatusMapRef.current));
                   if(user){
                     logAction(`User ${user.name} has been matched with another user.`);
                   }
@@ -405,7 +462,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
             if (userId) {
               try{
                 const user: User | undefined = await getUser(userId);
-                setUserStatusMap((prev) => new Map(prev).set(userId, "Confirmed"));
+                // Set user status to "Joining" in the status map using useRef
+                userStatusMapRef.current.set(userId, "Confirmed");
+                // Optionally trigger a re-render if the UI needs to reflect this status change
+                setUserStatusMap(new Map(userStatusMapRef.current));
                 if(user){
                   logAction(`User ${user.name} has confirmed their match.`);
                 }
@@ -427,7 +487,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
             if (userIds.length === 2) {
               for(const id of userIds){
                 const user: User | undefined = await getUser(id);
-                setUserStatusMap((prev) => new Map(prev).set(id, "InMatch"));
+                // Set user status to "Joining" in the status map using useRef
+                userStatusMapRef.current.set(id, "InMatch");
+                // Optionally trigger a re-render if the UI needs to reflect this status change
+                setUserStatusMap(new Map(userStatusMapRef.current));
                 if(user){
                   logAction(`User ${user.name} is now in a match.`);
                 }
@@ -462,7 +525,10 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
             if (userIds.length > 0) {
               userIds.forEach(id => {
                 const user: User | undefined = allUsers.find(user => user.id === id);
-                setUserStatusMap((prev) => new Map(prev).set(id, "Finished"));
+                // Set user status to "Joining" in the status map using useRef
+                userStatusMapRef.current.set(id, "Finished");
+                // Optionally trigger a re-render if the UI needs to reflect this status change
+                setUserStatusMap(new Map(userStatusMapRef.current));
                 if(user){
                   logAction(`User ${user.name} match has finished.`);
                 }
@@ -505,6 +571,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       if (chat) {
         await getAllUsers();
         await startWatchChannel();
+        await organicallySimulateMatchmaking();
       }
     };
 
