@@ -57,6 +57,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
         userId: "client-sim"
       });
 
+      console.log('initialized chat success');
       setChat(chat);
     }
     catch(e){
@@ -569,6 +570,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
     console.log("Initializing Users");
     const initializeUsers = async () => {
       if (chat) {
+        console.log(chat);
         await getAllUsers();
         await startWatchChannel();
         await organicallySimulateMatchmaking();

@@ -58,7 +58,7 @@ export async function simulateUser(region: string, userID: string) {
       if (message.content.text.startsWith(`game-lobby-`)) {
         gameLobbyChannelID = message.content.text; // Save the game lobby channel ID
 
-        joinGameLobby(gameLobbyChannelID, user.id); // Join the game lobby using the gameLobbyChannelID and user's ID
+        joinGameLobby(gameLobbyChannelID, chat); // Join the game lobby using the gameLobbyChannelID and user's ID
 
         await preLobbyChannel.leave(); // Leave the pre-lobby after joining the game lobby
       }
@@ -199,7 +199,19 @@ async function simulateJoiningLobby(preLobbyChannel: Channel) {
  * @param gameLobbyID - The ID of the game lobby the user will join
  * @param userID - The ID of the user joining the game lobby
  */
-function joinGameLobby(gameLobbyID: string, userID: string) {
-  // console.log(`User: ${userID} has successfully joined game lobby: ${gameLobbyID}`);
+async function joinGameLobby(gameLobbyID: string, chat: Chat) {
+
+  const gameLobbyChannel: Channel | null = await chat.getChannel(gameLobbyID); // Fetch thet gamelobby
+
+  if (!gameLobbyChannel) {
+    throw new Error("Failed to find matchmaking channel"); // Throw an error if the channel is not found
+  }
+
+  await gameLobbyChannel.join((_) => {})
+
+  // Wait for 2 minutes (120,000 milliseconds)
+  await new Promise((resolve) => setTimeout(resolve, 120000));
+
+  await gameLobbyChannel.leave();
 }
 

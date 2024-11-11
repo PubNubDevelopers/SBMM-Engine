@@ -164,7 +164,7 @@ To run the project locally, you’ll need:
   docker-compose up --build
   ```
 
-### Visualize SBMM using BizOps Workspace
+### Visualize Users using BizOps Workspace
 
 1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/).
 
@@ -176,11 +176,35 @@ To run the project locally, you’ll need:
 
 5. This is the user management dashboard where you can visualize all the users in your game
 
-![Alt text](assets/BizOps.Dashboard.png)
+![Alt text](assets/BizOps.User.Dashboard.png)
 
 6. Click on an indivdual user to see their status, and state
 
 ![Alt text](assets/BizOps.User.png)
+
+### Visualize Game Lobbies using BizOps Workspace
+
+1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/).
+
+2. On the side menu click the drop down BizOps Workspace
+
+3. Under the drop down select Channel Management
+
+4. Select the app and keyset you configured the SBMM repo with
+
+5. This is the channel management dashboard where you can visualize individual game lobbies and pre-game lobbies and the users that are part of them
+
+![Alt text](assets/BizOps.Channel.Dashboard.png)
+
+6. Click on an individual channel to see the status, and state
+
+![Alt text](assets/BizOps.Channel.png)
+
+7. Click on view memberships to see who is active in that game lobby. If no one is active that means the game has ended
+
+![Alt text](assets/BizOps.View.Memberships.png)
+
+
 
 ## License
 
