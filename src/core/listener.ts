@@ -1,8 +1,9 @@
 import { Chat, Membership, User } from "@pubnub/chat";
-import { getPubNubChatInstance } from '../utils/pubnub';
+import { getPubNubChatInstance, getPubNubInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
 import { getChannelMembersWithHandling, getOrCreateChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { retryOnFailure, isTransientError } from "../utils/error";
+import PubNub from "pubnub";
 
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval (in milliseconds) to run the matchmaking process
 let regionChannelID = 'matchmaking-us-east-1';
@@ -27,6 +28,9 @@ let isProcessingQueue = false;
  */
 export async function startListener() {
   const chat = await getPubNubChatInstance(serverID);
+  const pubnub = await getPubNubInstance(serverID);
+
+  await clearMemberships(chat, pubnub);
 
   // Set up an interval to repeatedly run the matchmaking logic for this region
   setInterval(async () => {
@@ -37,6 +41,43 @@ export async function startListener() {
     }
   }, MATCHMAKING_INTERVAL_MS); // Run matchmaking logic at the specified interval
 }
+
+async function clearMemberships(chat: Chat, pubnub: PubNub) {
+  const regionChannel = await getOrCreateChannel(chat, regionChannelID);
+
+  if (regionChannel) {
+    try {
+      // Fetch members with retry and graceful fallback on failure
+      const members: Membership[] = await retryOnFailure(
+        () => getChannelMembersWithHandling(regionChannel),
+        3, // Max retries
+        1000 // Retry delay in milliseconds
+      );
+
+      if (members.length > 0) {
+        // Extract UUIDs of all members
+        const memberUUIDs = members.map((member) => member.user.id);
+
+        // Remove all members from the channel
+        await pubnub.objects.removeChannelMembers({
+          channel: regionChannelID,
+          uuids: memberUUIDs, // Remove all member UUIDs
+        });
+
+        console.log(
+          `Successfully cleared ${memberUUIDs.length} members from the channel ${regionChannelID}.`
+        );
+      } else {
+        console.log(`No members found in the channel ${regionChannelID}.`);
+      }
+    } catch (error) {
+      console.error(`Failed to clear memberships for channel ${regionChannelID}:`, error);
+    }
+  } else {
+    console.warn(`Region channel ${regionChannelID} could not be found or created.`);
+  }
+}
+
 
 async function handleMatchmaking(chat: Chat) {
   try {

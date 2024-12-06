@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const getPubNubInstance = async (userID: string): Promise<PubNub> => {
-  console.log("This is the userID for the PubNub Instance: ", userID);
   return new PubNub({
     publishKey: process.env.PUBLISH_KEY as string,
     subscribeKey: process.env.SUBSCRIBE_KEY as string,
