@@ -38,78 +38,31 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   }
 
   /*
- * Hydrate Users
- */
-const hydrateUsers = async (users: User[]) => {
-  try {
-    // Iterate through all users and check their membership details
-    await Promise.all(
-      users.map(async (user) => {
-        await checkMembershipDetails(user);
-      })
-    );
-  } catch (error) {
-    console.error("Error hydrating users:", error);
-  }
-};
-
-/*
-* Hydrate stats
-*/
-const hydrateStats = async() => {
-  if(chat){
-    let user: User | null = await chat.getUser("stats-sim");
-    if(!user){
-      user = await chat.createUser("stats-sim", {
-        name: "Stats Data",
-        custom: {
-          totalPlayers: 0,
-          avgWaitTime: 0,
-          MatchesFormed: 0
-        }
-      });
-    }
-
-    setStatsUser(user);
-
-    user.streamUpdates((user) => {
-      setStatsUser(user);
-    });
-
-    console.log(JSON.stringify(user.custom));
-  }
-}
-
-
-/*
- * Check membership details
- */
-const checkMembershipDetails = async (user: User) => {
-  try {
-    // Retrieve user memberships
-    const obj = await user.getMemberships();
-    const memberships = obj.memberships;
-
-    // Iterate through memberships to check for specific channels
-    memberships.forEach((membership: Membership) => {
-      const channelName = membership.channel.id;
-
-      if (channelName.startsWith("game-lobby-")) {
-        // Set user status to "Matched"
-        userStatusMapRef.current.set(user.id, "Matched");
-        // Trigger re-render
-        setUserStatusMap(new Map(userStatusMapRef.current));
-      } else if (channelName.startsWith("pre-lobby-")) {
-        // Set user status to "InMatch"
-        userStatusMapRef.current.set(user.id, "InMatch");
-        // Trigger re-render
-        setUserStatusMap(new Map(userStatusMapRef.current));
+  * Hydrate stats
+  */
+  const hydrateStats = async() => {
+    if(chat){
+      let user: User | null = await chat.getUser("stats-sim");
+      if(!user){
+        user = await chat.createUser("stats-sim", {
+          name: "Stats Data",
+          custom: {
+            totalPlayers: 0,
+            avgWaitTime: 0,
+            MatchesFormed: 0
+          }
+        });
       }
-    });
-  } catch (error) {
-    console.error("Error checking membership details:", error);
+
+      setStatsUser(user);
+
+      user.streamUpdates((user) => {
+        setStatsUser(user);
+      });
+
+      console.log(JSON.stringify(user.custom));
+    }
   }
-};
 
 
   /*
@@ -124,7 +77,6 @@ const checkMembershipDetails = async (user: User) => {
       setAllUsers(users);
       // Initialize userStatusMap with each user set to "Finished" using useRef
       userStatusMapRef.current = new Map();
-      await hydrateUsers(users);
 
       organizeUsersIntoSkillBuckets(users);
     }

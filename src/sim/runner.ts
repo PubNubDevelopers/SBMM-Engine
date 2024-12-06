@@ -2,8 +2,10 @@ import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../../src/utils/pubnub";
 import { updateChannelStatus } from "../api/membership";
 import { retryOnFailure } from "../utils/error";
+import { updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 
-let userTracker: string[] = [];
+type UserTrackCallBackFunction = (data: string) => void;
+type ChannelTrackCallBackFunction = (data: string) => void;
 
 /**
  * Simulate an individual user with a specific region
@@ -14,9 +16,10 @@ let userTracker: string[] = [];
  * @param region - The region assigned to the user (e.g., 'us-east-1')
  * @param userIndex - The index number of the user being simulated
  */
-export async function simulateUser(region: string, userID: string) {
+export async function simulateUser(region: string, userID: string, userTracker: string[], channelTracker: string[], userTrackerCallBackFunction: UserTrackCallBackFunction, channelTrackerCallBackFunction: ChannelTrackCallBackFunction) {
   try {
     if(!userTracker.includes(userID)){
+      userTrackerCallBackFunction(userID);
       userTracker.push(userID);
     }
     var startTime = Date.now();
@@ -42,6 +45,10 @@ export async function simulateUser(region: string, userID: string) {
               3,
               2000
             );
+            if(!channelTracker.includes(gameLobbyChannelID)){
+              channelTrackerCallBackFunction(gameLobbyChannelID);
+            }
+            await updateMatchesFormed(chat, gameLobbyChannelID, channelTracker);
             await retryOnFailure(() => preLobbyChannel.leave(), 3, 2000);
           }
         });
@@ -52,8 +59,7 @@ export async function simulateUser(region: string, userID: string) {
     const userChannel = await retryOnFailure(async () => {
       const channel = await chat.getChannel(personalChannelID);
       return (
-        channel ||
-        chat.createPublicConversation({ channelId: personalChannelID })
+        channel || chat.createPublicConversation({ channelId: personalChannelID })
       );
     }, 3, 2000);
 
@@ -61,7 +67,7 @@ export async function simulateUser(region: string, userID: string) {
     await retryOnFailure(async () => {
       await userChannel.join(async (message: Message) => {
         try {
-          await updateStatsUser(chat, startTime);
+          await updateStatsUser(chat, startTime, userTracker);
           const parsedMessage =
             tryParseJSON(message.content.text) || { message: message.content.text };
 
@@ -239,7 +245,7 @@ function tryParseJSON(json: string): any | null {
   }
 }
 
-async function updateStatsUser(chat: Chat, startTime: number) {
+async function updateStatsUser(chat: Chat, startTime: number, userTracker: string[]) {
   try{
     const endTime = Date.now();
     const timeDifferenceInSeconds = (endTime - startTime) / 1000;
@@ -271,11 +277,39 @@ async function updateStatsUser(chat: Chat, startTime: number) {
       matchesFormed: matchesFormed
     }
 
-    await user.update({
-      custom: json, // Merged data
-    });
+    await updatePlayerMetadataWithRetry(user, json);
   }
   catch(e){
     console.log("Failed to update stats user: ", e);
+  }
+}
+
+async function updateMatchesFormed(chat: Chat, channel: string, channelTracker: string[]){
+  if(channelTracker.length > 100){
+    channelTracker.pop();
+  }
+  if(!channelTracker.includes(channel)){
+    channelTracker.push(channel);
+    let user: User | null = await chat.getUser("stats-sim");
+
+    if(!user){
+      user = await chat.createUser("stats-sim", {
+        name: "Stats Data",
+        custom: {
+          totalPlayers: 0,
+          avgWaitTime: 0,
+          MatchesFormed: 0
+        }
+      });
+    }
+
+    var matchesFormed = user.custom?.matchesFormed ?? 0;
+    matchesFormed = matchesFormed + 1;
+
+    const json = {
+      matchesFormed: matchesFormed
+    }
+
+    await updatePlayerMetadataWithRetry(user, json);
   }
 }

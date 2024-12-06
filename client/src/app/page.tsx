@@ -31,6 +31,8 @@ export default function Home() {
     setShowAllLogs(!showAllLogs);
   };
 
+  console.log(userStatusMap);
+
 
   const [players, setPlayers] = useState([
     { id: 1, name: "Alice", skill: 1200, region: "NA", status: "In Queue" },
@@ -81,54 +83,61 @@ export default function Home() {
             <div className="col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-800">Players in Queue</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              {[...userStatusMap]
-                .filter(([id, status]) => status === "Joining") // Filter for "Joining" status
-                .map(([id, status]) => {
-                  const user = allUsers.find((user) => user.id === id); // Find the user in allUsers
-                  if (!user) return null; // Skip rendering if the user is not found
+                {[...userStatusMap]
+                  .filter(([id, status]) => status === "Joining") // Filter for "Joining" status
+                  .slice(0, 6) // Show only the first 6 players
+                  .map(([id, status]) => {
+                    const user = allUsers.find((user) => user.id === id); // Find the user in allUsers
+                    if (!user) return null; // Skip rendering if the user is not found
 
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center bg-white p-4 rounded-md shadow-sm border border-gray-200"
-                    >
-                      {/* Profile Image */}
-                      <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300">
-                        <Image
-                          src={user.profileUrl || "/assets/Avatar1.png"}
-                          alt="Profile"
-                          width={48}
-                          height={48}
-                          className="object-cover"
-                        />
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center bg-white p-4 rounded-md shadow-sm border border-gray-200"
+                      >
+                        {/* Profile Image */}
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300">
+                          <Image
+                            src={user.profileUrl || "/assets/Avatar1.png"}
+                            alt="Profile"
+                            width={48}
+                            height={48}
+                            className="object-cover"
+                          />
+                        </div>
+                        {/* Player Info */}
+                        <div className="ml-4 flex-1">
+                          <p className="text-sm font-semibold text-gray-800">{user.name}</p>
+                          <p className="text-xs text-gray-600">
+                            Skill: <span className="text-blue-600">{user.custom.elo}</span> | Region:{" "}
+                            <span className="text-gray-800">{user.custom.server}</span>
+                          </p>
+                        </div>
+                        {/* Status Icon */}
+                        <div>
+                          {status === "In Queue" && (
+                            <MdOutlineAccessTime
+                              className="text-yellow-500 text-xl"
+                              title="In Queue"
+                            />
+                          )}
+                          {status === "In Match" && (
+                            <MdSportsEsports
+                              className="text-green-500 text-xl"
+                              title="In Match"
+                            />
+                          )}
+                        </div>
                       </div>
-                      {/* Player Info */}
-                      <div className="ml-4 flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{user.custom.name}</p>
-                        <p className="text-xs text-gray-600">
-                          Skill: <span className="text-blue-600">{user.custom.skill}</span> | Region:{" "}
-                          <span className="text-gray-800">{user.custom.region}</span>
-                        </p>
-                      </div>
-                      {/* Status Icon */}
-                      <div>
-                        {status === "In Queue" && (
-                          <MdOutlineAccessTime className="text-yellow-500 text-xl" title="In Queue" />
-                        )}
-                        {status === "In Match" && (
-                          <MdSportsEsports className="text-green-500 text-xl" title="In Match" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
-              {/* Total Players Note */}
-              {players.length > 6 && (
-                <p className="text-sm text-gray-600 mt-4">
-                  + {players.length - 6} more players in queue
-                </p>
-              )}
+              {/* View More Button */}
+              {[...userStatusMap].filter(([id, status]) => status === "Joining").length > 6 && (
+                <div className="mt-4 text-center text-gray-500 text-xs">
+                  {[...userStatusMap].filter(([id, status]) => status === "Joining").length} total players in queue
+                </div>
+                )}
             </div>
 
             {/* Stats */}
@@ -185,7 +194,7 @@ export default function Home() {
         </section>
 
         {/* Player Simulation Controls */}
-        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
+        {/* <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
           <h2 className="text-xl font-bold text-gray-800">Simulate Matchmaking</h2>
           <p className="text-sm text-gray-600 mt-2">
             Add players to the queue with adjustable skill ratings and see how PubNub matches them.
@@ -198,7 +207,7 @@ export default function Home() {
               Add Player
             </button>
           </div>
-        </section>
+        </section> */}
 
         {/* Skill Buckets Section */}
         <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">

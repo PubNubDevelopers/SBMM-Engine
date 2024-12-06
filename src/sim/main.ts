@@ -10,6 +10,9 @@ let chat: Chat;
 const userStatusMap = new Map<string, string>();
 const cooldownMap = new Map(); // Tracks users' cooldown periods
 
+let userTracker: string[] = [];
+let channelTracker: string[] = [];
+
 export async function simulateMatchmaking() {
   try {
     // Initialize PubNub Chat instance
@@ -28,18 +31,14 @@ export async function simulateMatchmaking() {
 /**
  * Simulates matchmaking organically for users over time.
  */
-function organicallySimulateMatchmaking() {
+async function organicallySimulateMatchmaking() {
   const getEligibleUser = () => {
     for (let [userId, status] of userStatusMap) {
-      if (status === "Idle" && !cooldownMap.has(userId)) {
+      if (status === "Finished" && !cooldownMap.has(userId)) {
         return { id: userId };
       }
     }
     return null; // No eligible users found
-  };
-
-  const addNewUser = (userId: string) => {
-    userStatusMap.set(userId, "Idle");
   };
 
   const setCooldown = (userId: string) => {
@@ -47,7 +46,7 @@ function organicallySimulateMatchmaking() {
     cooldownMap.set(userId, Date.now() + cooldownTime);
     setTimeout(() => {
       cooldownMap.delete(userId); // Remove from cooldown after time expires
-      userStatusMap.set(userId, "Idle");
+      userStatusMap.set(userId, "Finished");
       console.log(`User ${userId} is back in the matchmaking pool.`);
     }, cooldownTime);
   };
@@ -57,7 +56,14 @@ function organicallySimulateMatchmaking() {
     if (eligibleUser) {
       userStatusMap.set(eligibleUser.id, "Joining");
       console.log(`Simulating matchmaking for user: ${eligibleUser.id}`);
-      await simulateUser("us-east-1", eligibleUser.id); // Simulate matchmaking
+      await simulateUser("us-east-1", eligibleUser.id, userTracker, channelTracker, (userID) => {
+        userTracker.push(userID);
+      }, (channelID) => {
+        if(channelTracker.length > 100){
+          channelTracker.pop();
+        }
+        channelTracker.push(channelID);
+      }); // Simulate matchmaking
       userStatusMap.set(eligibleUser.id, "InMatch");
 
       // Simulate user finishing a match
@@ -70,13 +76,6 @@ function organicallySimulateMatchmaking() {
       console.log("No eligible users for simulation at this time.");
     }
   }, Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000); // Random delay between 1-5 seconds
-
-  // Optionally add new users over time
-  setInterval(() => {
-    const newUserId = `user-${Math.floor(Math.random() * 1000)}`;
-    addNewUser(newUserId);
-    console.log(`New user joined: ${newUserId}`);
-  }, Math.floor(Math.random() * (20000 - 10000 + 1)) + 10000); // Add new users every 10-20 seconds
 }
 
 /**
@@ -105,8 +104,7 @@ async function initializeUsers() {
 async function cleanUserData(users: User[]): Promise<User[]> {
   const allUsers: User[] = [];
 
-  await Promise.all(
-    users.map(async (user) => {
+  await Promise.all(users.map(async (user) => {
       let needsUpdate = false;
       const updatedData: {
         name?: string;
