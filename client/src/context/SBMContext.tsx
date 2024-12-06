@@ -68,7 +68,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Updates the allUsers state with the retrieved users.
   */
   const getAllUsers = async () => {
-    const u = await chat?.getUsers({ limit: 1000 });
+    const u = await chat?.getUsers({ limit: 100, sort: {name: "desc"} });
     if (u && u.users) {
       const users = u.users;
 

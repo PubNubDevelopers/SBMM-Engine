@@ -23,7 +23,7 @@ export async function simulateMatchmaking() {
     await initializeUsers();
 
     // Start organic matchmaking simulation
-    organicallySimulateMatchmaking();
+    await organicallySimulateMatchmaking();
 
   } catch (error) {
     console.error("Error initializing server:", error);
@@ -85,7 +85,7 @@ async function organicallySimulateMatchmaking() {
  */
 async function initializeUsers() {
   try {
-    const response = await chat.getUsers({ limit: 1000 });
+    const response = await chat.getUsers({ limit: 100, sort: {name: "desc"} });
     if (response) {
       users = await cleanUserData(response.users);
 
