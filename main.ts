@@ -1,10 +1,10 @@
 // main.ts
-import { startMatchmaking } from './src/core/listener';
+import { startListener } from './src/core/listener';
+import { simulateMatchmaking } from './src/sim/main';
 
 const main = async () => {
-  /// Intialize the server by calling the matchmaking listener
-  console.log("Starting SBM Matchmaking Server");
-  startMatchmaking();
+  startListener();
+  simulateMatchmaking();
 }
 
 main();

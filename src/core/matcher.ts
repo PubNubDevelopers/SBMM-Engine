@@ -1,11 +1,12 @@
-import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
+import { Channel, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../utils/pubnub";
 import { pairMembersBySkill } from "./sbm";
 import { getOrCreateChannel, notifyClient, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { delay } from "../utils/general";
-import { retryOnFailure, isTransientError } from "../utils/error";
+import { retryOnFailure } from "../utils/error";
 
 const serverID = "server"
+type MatchmakingCallback = (player1: User, player2: User) => Promise<void> | void;
 
 /**
  * Process matchmaking logic
@@ -17,7 +18,7 @@ const serverID = "server"
  * @param members - List of players or users to be paired for matchmaking.
  * @param latencyMap - A map of latencies between the users.
  */
-export async function processMatchMaking(members: any[]) {
+export async function processMatchMaking(members: any[], callback: MatchmakingCallback) {
   // Pair members using the latency and skill-based matchmaking algorithm
   const pairs = pairMembersBySkill(members);
 
@@ -28,6 +29,8 @@ export async function processMatchMaking(members: any[]) {
 
     // Create a pre-lobby listener to handle confirmation between the two players
     await createPreLobbyListener(player1, player2);
+
+    callback(player1, player2);
   }
 }
 
