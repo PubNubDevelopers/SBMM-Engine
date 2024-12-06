@@ -128,41 +128,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   }
 
   /*
-  * Generates a specified number of new users with unique IDs.
-  * Sets initial values for each user, including username and latency.
-  * Adds each newly created user to the allUsers state.
-  */
-  const generateUsers = async (count: number) => {
-    let users: User[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const u = generateUsername();
-      console.log("Generated username: ", u);
-      const userMeta = {
-        id: uuidv4(),
-        username: u,
-        elo: generateLongTailElo(),
-        punished: false,
-        confirmed: false,
-        inMatch: false,
-        inPreLobby: false,
-        server: 'us-east-1',
-        latency: Math.floor(Math.random() * 100) + 20
-      };
-
-      const user = await createUser(userMeta);
-      if (user) {
-        users.push(user); // Add each created user to the users array
-      }
-    }
-
-    // Update the allUsers state by appending the new users
-    setAllUsers((prevAllUsers) => [...prevAllUsers, ...users]);
-    // Organize the new users into skill buckets
-    organizeUsersIntoSkillBuckets(users);
-  };
-
-  /*
   * Creates a user if they don’t already exist within the chat instance.
   * Retrieves an existing user or creates a new one with custom properties.
   * Returns the created or existing user, or logs an error if unsuccessful.
@@ -443,8 +408,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
         userStatusMap,
         logs,
         statsUser,
-        allUsers,
-        generateUsers
+        allUsers
       }}
     >
     {children}

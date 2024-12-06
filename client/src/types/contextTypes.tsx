@@ -9,8 +9,7 @@ export interface SBMType {
   userStatusMap: Map<string, string>,
   logs: string[],
   statsUser: User | undefined,
-  allUsers: User[],
-  generateUsers: (count: number) => Promise<void>
+  allUsers: User[]
 }
 
 export const SBMContext = React.createContext<SBMType | null>(null);
