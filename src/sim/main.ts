@@ -42,7 +42,7 @@ async function organicallySimulateMatchmaking() {
   };
 
   const setCooldown = (userId: string) => {
-    const cooldownTime = Math.floor(Math.random() * (60000 - 20000 + 1)) + 20000; // 20 seconds to 1 minute
+    const cooldownTime = Math.floor(Math.random() * (1200000 - 30000 + 1)) + 30000;
     cooldownMap.set(userId, Date.now() + cooldownTime);
     setTimeout(() => {
       cooldownMap.delete(userId); // Remove from cooldown after time expires
