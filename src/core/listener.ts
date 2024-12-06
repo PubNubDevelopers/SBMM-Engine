@@ -1,4 +1,4 @@
-import { Channel, Chat, Membership, User } from "@pubnub/chat";
+import { Chat, Membership, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
 import { getChannelMembersWithHandling, getOrCreateChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
@@ -7,6 +7,7 @@ import { retryOnFailure, isTransientError } from "../utils/error";
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval (in milliseconds) to run the matchmaking process
 let regionChannelID = 'matchmaking-us-east-1';
 const serverID = "server";
+const avgWaitTime = 0;
 
 // A queue to hold users waiting to be processed
 let matchmakingQueue: Membership[] = [];
@@ -24,7 +25,7 @@ let isProcessingQueue = false;
  * If not, it creates one. Then, every 5 seconds (or the defined interval), it fetches the members in the channel and
  * processes matchmaking logic if there are enough players.
  */
-export async function startMatchmaking() {
+export async function startListener() {
   const chat = await getPubNubChatInstance(serverID);
 
   // Set up an interval to repeatedly run the matchmaking logic for this region
@@ -100,7 +101,9 @@ async function processMatchmakingQueue() {
     }
 
     await notifyTestingClientUsersMatchmaking(userIds);
-    processMatchMaking(usersToProcess);
+    processMatchMaking(usersToProcess, () => {
+
+    });
 
     processingUserIds = processingUserIds.filter((id) => !userIds.includes(id));
     matchmakingQueue = matchmakingQueue.filter((member) => !userIds.includes(member.user.id));
@@ -196,3 +199,4 @@ async function notifyTestingClientUsersMatchmaking(userIds: string[]){
     console.error("Failed to notify testing client for joinging request listener.ts");
   }
 }
+

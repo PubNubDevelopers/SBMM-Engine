@@ -13,7 +13,7 @@
   "include": [
     "src/**/*",                                 // Include all files inside src directory
     "main.ts"                                   // Include the main.ts file in the root
-, "tests/utils/test-latency-runner.ts", "tests/utils/test-runner.ts"  ],
+, "tests/utils/test-latency-runner.ts", "tests/utils/test-runner.ts", "tests/api"  ],
   "exclude": [
     "node_modules",                             // Exclude node_modules from compilation
     "dist"                                      // Exclude dist folder from compilation
