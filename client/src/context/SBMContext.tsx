@@ -97,8 +97,8 @@ const hydrateUsers = async (users: User[]) => {
   }
 };
 
-  /*
-  * Check membership details
+    /*
+  * Check membership details with priority
   */
   const checkMembershipDetails = async (user: User) => {
     try {
@@ -108,8 +108,10 @@ const hydrateUsers = async (users: User[]) => {
       const obj = await user.getMemberships();
       const memberships = obj.memberships;
 
+      let statusSet = false; // Track if a status has been set
+
       // Iterate through memberships to check for specific channels
-      memberships.forEach((membership: Membership) => {
+      for (const membership of memberships) {
         const timeToken = membership.lastReadMessageTimetoken;
         const channelName = membership.channel.id;
 
@@ -122,21 +124,21 @@ const hydrateUsers = async (users: User[]) => {
           // Only consider recent memberships
           if (isWithinLastFiveMinutes) {
             if (channelName.startsWith("game-lobby-")) {
-              // Set user status to "Matched"
-              userStatusMapRef.current.set(user.id, "Matched");
-              // Trigger re-render
-              setUserStatusMap(new Map(userStatusMapRef.current));
-            } else if (channelName.startsWith("pre-lobby-")) {
-              // Set user status to "InMatch"
+              // Set user status to "Matched" and exit immediately
               userStatusMapRef.current.set(user.id, "InMatch");
-              // Trigger re-render
-              setUserStatusMap(new Map(userStatusMapRef.current));
+              setUserStatusMap(new Map(userStatusMapRef.current)); // Trigger re-render
+              return; // Exit as game-lobby takes priority
+            } else if (!statusSet && channelName.startsWith("pre-lobby-")) {
+              // Set user status to "InMatch" if no higher-priority status is set
+              userStatusMapRef.current.set(user.id, "Matched");
+              setUserStatusMap(new Map(userStatusMapRef.current)); // Trigger re-render
+              statusSet = true; // Mark that a status has been set
             }
           }
         } else {
           console.warn(`Membership for channel ${channelName} has undefined timeToken.`);
         }
-      });
+      }
     } catch (error) {
       console.error("Error checking membership details:", error);
       console.log(JSON.stringify(user.custom));

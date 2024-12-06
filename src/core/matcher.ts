@@ -18,7 +18,7 @@ type MatchmakingCallback = (player1: User, player2: User) => Promise<void> | voi
  * @param members - List of players or users to be paired for matchmaking.
  * @param latencyMap - A map of latencies between the users.
  */
-export async function processMatchMaking(members: any[], callback: MatchmakingCallback) {
+export async function processMatchMaking(members: any[]) {
   // Pair members using the latency and skill-based matchmaking algorithm
   const pairs = pairMembersBySkill(members);
 
@@ -29,8 +29,6 @@ export async function processMatchMaking(members: any[], callback: MatchmakingCa
 
     // Create a pre-lobby listener to handle confirmation between the two players
     await createPreLobbyListener(player1, player2);
-
-    callback(player1, player2);
   }
 }
 
