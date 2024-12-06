@@ -1,4 +1,4 @@
-import { Chat, User } from "@pubnub/chat";
+import { Chat, Membership, User } from "@pubnub/chat";
 import dotenv from "dotenv";
 import { getPubNubChatInstance } from "../utils/pubnub"; // Custom utility
 import { generateUsername } from "unique-username-generator";
@@ -8,6 +8,7 @@ dotenv.config(); // Load environment variables
 
 let chat: Chat;
 const userStatusMap = new Map<string, string>();
+let users: User[] = [];
 const cooldownMap = new Map(); // Tracks users' cooldown periods
 
 let userTracker: string[] = [];
@@ -23,6 +24,7 @@ export async function simulateMatchmaking() {
 
     // Start organic matchmaking simulation
     organicallySimulateMatchmaking();
+
   } catch (error) {
     console.error("Error initializing server:", error);
   }
@@ -85,7 +87,9 @@ async function initializeUsers() {
   try {
     const response = await chat.getUsers({ limit: 1000 });
     if (response) {
-      const users = await cleanUserData(response.users);
+      users = await cleanUserData(response.users);
+
+      startMembershipCheckInterval();
 
       users.forEach((user) => {
         userStatusMap.set(user.id, "Finished");
@@ -96,6 +100,60 @@ async function initializeUsers() {
   } catch (error) {
     console.error("Error fetching users:", error);
   }
+}
+
+// Sequential execution using setTimeout
+async function startMembershipCheckInterval() {
+  try {
+    await checkForOutDatedMemberships();
+  } catch (error) {
+    console.error("Error checking memberships:", error);
+  } finally {
+    setTimeout(startMembershipCheckInterval, 60 * 1000); // Wait 1 minute before next call
+  }
+}
+
+
+async function checkForOutDatedMemberships() {
+  const tenMinutesInTimetokens = 10 * 60 * 1000 * 10_000; // 10 minutes in timeToken units
+
+  await Promise.all(
+    users.map(async (user) => {
+      try {
+        const obj = await user.getMemberships();
+        const memberships = obj.memberships;
+
+        memberships.forEach((membership: Membership) => {
+          try {
+            const timeToken = membership.lastReadMessageTimetoken;
+
+            // Handle undefined timeToken
+            if (timeToken === undefined) {
+              console.warn(`timeToken is undefined for channel: ${membership.channel.id}`);
+              return; // Skip processing this membership
+            }
+
+            const timeTokenBigInt = BigInt(timeToken); // Convert to BigInt
+            const currentTimeToken = BigInt(Date.now()) * BigInt(10_000); // Current time in timeToken format
+            const isOlderThanTenMinutes = currentTimeToken - timeTokenBigInt > BigInt(tenMinutesInTimetokens);
+
+            const channelId = membership.channel.id;
+            const startsWithCondition =
+              channelId.startsWith("game-lobby") || channelId.startsWith("pre-lobby");
+
+            if (isOlderThanTenMinutes && startsWithCondition) {
+              membership.channel.delete();
+              console.log(`Channel ${channelId} has been deleted`);
+            }
+          } catch (membershipError) {
+            console.error(`Error processing membership for channel ${membership.channel.id}:`, membershipError);
+          }
+        });
+      } catch (userError) {
+        console.error(`Error retrieving memberships for user ${user.id}:`, userError);
+      }
+    })
+  );
 }
 
 /**

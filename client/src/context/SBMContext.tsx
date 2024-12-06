@@ -1,6 +1,6 @@
 "use client"
 
-import { Chat, Message, User } from "@pubnub/chat";
+import { Chat, Membership, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { SBMContext, SkillRange } from "../types/contextTypes";
 
@@ -73,10 +73,73 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       const users = u.users;
 
       setAllUsers(users);
+      await hydrateUsers(users);
       // Initialize userStatusMap with each user set to "Finished" using useRef
       userStatusMapRef.current = new Map();
 
       organizeUsersIntoSkillBuckets(users);
+    }
+  };
+
+    /*
+ * Hydrate Users
+ */
+const hydrateUsers = async (users: User[]) => {
+  try {
+    // Iterate through all users and check their membership details
+    await Promise.all(
+      users.map(async (user) => {
+        await checkMembershipDetails(user);
+      })
+    );
+  } catch (error) {
+    console.error("Error hydrating users:", error);
+  }
+};
+
+  /*
+  * Check membership details
+  */
+  const checkMembershipDetails = async (user: User) => {
+    try {
+      const fiveMinutesInTimetokens = 5 * 60 * 1000 * 10_000; // 5 minutes in timeToken units
+
+      // Retrieve user memberships
+      const obj = await user.getMemberships();
+      const memberships = obj.memberships;
+
+      // Iterate through memberships to check for specific channels
+      memberships.forEach((membership: Membership) => {
+        const timeToken = membership.lastReadMessageTimetoken;
+        const channelName = membership.channel.id;
+
+        // Ensure timeToken is defined
+        if (timeToken !== undefined) {
+          const timeTokenBigInt = BigInt(timeToken);
+          const currentTimeToken = BigInt(Date.now()) * BigInt(10_000); // Current time in timeToken format
+          const isWithinLastFiveMinutes = currentTimeToken - timeTokenBigInt <= BigInt(fiveMinutesInTimetokens);
+
+          // Only consider recent memberships
+          if (isWithinLastFiveMinutes) {
+            if (channelName.startsWith("game-lobby-")) {
+              // Set user status to "Matched"
+              userStatusMapRef.current.set(user.id, "Matched");
+              // Trigger re-render
+              setUserStatusMap(new Map(userStatusMapRef.current));
+            } else if (channelName.startsWith("pre-lobby-")) {
+              // Set user status to "InMatch"
+              userStatusMapRef.current.set(user.id, "InMatch");
+              // Trigger re-render
+              setUserStatusMap(new Map(userStatusMapRef.current));
+            }
+          }
+        } else {
+          console.warn(`Membership for channel ${channelName} has undefined timeToken.`);
+        }
+      });
+    } catch (error) {
+      console.error("Error checking membership details:", error);
+      console.log(JSON.stringify(user.custom));
     }
   };
 
@@ -114,50 +177,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       return updatedBuckets;
     });
   };
-
-  /*
- * Generates an elo value with a long-tail distribution between 0 and 3000.
- * The result is skewed towards lower values, with fewer high-end values.
- */
-  const generateLongTailElo = () => {
-    const maxElo = 3000;
-    const random = Math.random();
-    return Math.floor(maxElo * Math.pow(random, 3)); // Cubic distribution for long tail
-  }
-
-  /*
-  * Creates a user if they don’t already exist within the chat instance.
-  * Retrieves an existing user or creates a new one with custom properties.
-  * Returns the created or existing user, or logs an error if unsuccessful.
-  */
-  async function createUser(u: any): Promise<User | undefined> {
-    if(!chat) {
-      console.log("Failed to initialize chat");
-      return;
-    }
-    try{
-      const user = await chat.createUser(u.id, {
-        name: u.username,
-        custom: {
-          elo: u.elo,
-          punished: u.punished,
-          confirmed: u.confirmed,
-          inMatch: u.inMatch,
-          inPreLobby: u.inPreLobby,
-          server: u.server,
-          latency: u.latency
-        }
-      });
-      if(!user){
-        throw new Error("Failed to initialize user");
-      }
-
-      return user;
-    }
-    catch(e){
-      console.log(e);
-    }
-  }
 
   /*
   * Appends a new action log entry to the logs state.
