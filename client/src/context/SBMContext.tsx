@@ -1,9 +1,7 @@
 "use client"
 
-import { Chat, Membership, Message, User } from "@pubnub/chat";
+import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
-import { generateUsername } from "unique-username-generator";
-import { v4 as uuidv4 } from 'uuid';
 import { SBMContext, SkillRange } from "../types/contextTypes";
 
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
