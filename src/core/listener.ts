@@ -142,7 +142,7 @@ async function processMatchmakingQueue() {
     }
 
     await notifyTestingClientUsersMatchmaking(userIds);
-    await processMatchMaking(usersToProcess);
+    processMatchMaking(usersToProcess);
 
     processingUserIds = processingUserIds.filter((id) => !userIds.includes(id));
     matchmakingQueue = matchmakingQueue.filter((member) => !userIds.includes(member.user.id));
