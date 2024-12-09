@@ -68,9 +68,110 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   * Updates the allUsers state with the retrieved users.
   */
   const getAllUsers = async () => {
-    const u = await chat?.getUsers({ limit: 100, sort: {name: "desc"} });
-    if (u && u.users) {
-      const users = u.users;
+    const users = await fetchUsersByIds([
+      "7094df60-11d9-47fe-8690-10b5932b3a29",
+      "5c44ac5e-23eb-455f-8100-23ba69969225",
+      "3b598d50-3582-4284-b2eb-ca1842bd1ae2",
+      "0812a3db-ea89-40a4-ad79-c3acc4a2e578",
+      "1f18ae65-398b-4718-8fa4-18bcee5cfb22",
+      "1444d002-6145-4521-a47a-c1ffedfb9765",
+      "eb688e7b-7b5d-4a4f-af16-a842f6a15845",
+      "62ad1b37-fe77-40ec-895c-572ad0b7232a",
+      "5d62b43b-7216-4257-8f85-001871f65981",
+      "user-998",
+      "user-959",
+      "user-949",
+      "user-937",
+      "user-913",
+      "user-911",
+      "user-910",
+      "user-908",
+      "user-898",
+      "user-880",
+      "user-866",
+      "user-848",
+      "user-847",
+      "user-837",
+      "user-833",
+      "user-825",
+      "user-816",
+      "user-811",
+      "user-790",
+      "user-778",
+      "user-761",
+      "user-759",
+      "user-755",
+      "user-741",
+      "user-740",
+      "user-74",
+      "user-730",
+      "user-727",
+      "user-719",
+      "user-707",
+      "user-706",
+      "user-703",
+      "user-702",
+      "user-701",
+      "user-666",
+      "user-649",
+      "user-615",
+      "user-58",
+      "user-560",
+      "user-557",
+      "user-555",
+      "user-549",
+      "user-540",
+      "user-531",
+      "user-525",
+      "user-515",
+      "user-50",
+      "user-498",
+      "user-495",
+      "user-490",
+      "user-483",
+      "user-457",
+      "user-434",
+      "user-427",
+      "user-404",
+      "user-399",
+      "user-390",
+      "user-387",
+      "user-380",
+      "user-355",
+      "user-352",
+      "user-342",
+      "user-33",
+      "user-327",
+      "user-318",
+      "user-317",
+      "user-311",
+      "user-293",
+      "user-279",
+      "user-260",
+      "user-252",
+      "user-248",
+      "user-243",
+      "user-213",
+      "user-197",
+      "user-19",
+      "user-177",
+      "user-173",
+      "user-162",
+      "user-161",
+      "user-14",
+      "user-139",
+      "user-124",
+      "user-116",
+      "da8a747f-b0fe-4bf4-bfe3-8360abac4a85",
+      "9bd55bd5-1ca0-4fd1-b9b4-b2f26240d709",
+      "24d48e78-5dbe-440f-8887-40ba51a947f7",
+      "d1d32a18-a9b4-4e3d-aa09-6a914091c45a",
+      "5acc0c67-8355-4aea-b202-9fa376151826",
+      "001b97ba-d6d3-4aff-b0b1-faa7f167a13c",
+      "eeb379d1-5224-46a5-9706-8b89eeb5e747"
+    ]);
+    if (users) {
+      console.log(users.map((user) => user.id));
 
       setAllUsers(users);
       await hydrateUsers(users);
@@ -80,6 +181,27 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       organizeUsersIntoSkillBuckets(users);
     }
   };
+
+  async function fetchUsersByIds(ids: string[]): Promise<User[]> {
+    if(chat){
+      try {
+        // Create the filter expression for the given list of IDs
+        const filterExpression = ids.map((id) => `id == "${id}"`).join(" || ");
+
+        // Fetch users from PubNub with the filter expression
+        const response = await chat.getUsers({
+          limit: 100, // Adjust the limit if necessary
+          filter: filterExpression,
+        });
+
+        return response.users; // Return the list of fetched users
+      } catch (error) {
+        console.error("Error fetching users by IDs:", error);
+        return [];
+      }
+    }
+    return [];
+  }
 
     /*
  * Hydrate Users
@@ -231,6 +353,16 @@ const hydrateUsers = async (users: User[]) => {
 
       // Listen for incoming messages on the matchmaking channel
       watchChannel.join(async (message: Message) => {
+        // // Get current time
+        // const now = new Date();
+
+        // // Generate timetoken (nanoseconds since epoch)
+        // const timetoken = Number(message.timetoken) * 10000; // Milliseconds to nanoseconds
+
+        // // Convert timetoken back to Date
+        // const timeFromToken = new Date(timetoken / 10_000); // Nanoseconds to milliseconds
+
+        // console.log("Date from timetoken:", timeFromToken.toISOString());
         let parsedMessage: any;
         try {
           // Attempt to parse the message content as JSON
@@ -248,25 +380,33 @@ const hydrateUsers = async (users: User[]) => {
         // Handle each type of matchmaking event based on message content
         switch (parsedMessage.message) {
           case "Joining":
-            // Update status to "Joining" for each user in matchedUsers array and log action
-            for(const id of userIds){
-              try{
-                const user: User | undefined = await getUser(id);
-                // Set user status to "Joining" in the status map using useRef
-                userStatusMapRef.current.set(id, "Joining");
-                // Optionally trigger a re-render if the UI needs to reflect this status change
-                setUserStatusMap(new Map(userStatusMapRef.current));
-
-                if(user){
-                  logAction(`User ${user.name} is joining the matchmaking.`);
+            console.log("Joining Request");
+            try {
+              // Filter out existing "Joining" statuses from the map
+              const currentMap = new Map(userStatusMapRef.current);
+              for (const [id, status] of currentMap) {
+                if (status === "Joining") {
+                  currentMap.delete(id);
                 }
-                else{
+              }
+
+              // Add the new user IDs with the "Joining" status
+              for (const id of userIds) {
+                const user: User | undefined = await getUser(id);
+                currentMap.set(id, "Joining");
+
+                if (user) {
+                  logAction(`User ${user.name} is joining the matchmaking.`);
+                } else {
                   logAction(`User ${id} is joining the matchmaking.`);
                 }
               }
-              catch(e){
-                console.error(`Error fetching user ${id}:`, e);
-              }
+
+              // Update the map reference and trigger a re-render
+              userStatusMapRef.current = currentMap;
+              setUserStatusMap(new Map(currentMap)); // React state update for re-render
+            } catch (e) {
+              console.error("Error updating user statuses:", e);
             }
             break;
 

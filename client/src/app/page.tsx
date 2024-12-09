@@ -31,16 +31,7 @@ export default function Home() {
     setShowAllLogs(!showAllLogs);
   };
 
-  console.log(userStatusMap);
-
-
-  const [players, setPlayers] = useState([
-    { id: 1, name: "Alice", skill: 1200, region: "NA", status: "In Queue" },
-    { id: 2, name: "Bob", skill: 1250, region: "EU", status: "In Match" },
-    { id: 3, name: "Charlie", skill: 1300, region: "ASIA", status: "In Queue" },
-    { id: 4, name: "Dana", skill: 1100, region: "SA", status: "In Queue" },
-    { id: 5, name: "Eve", skill: 1350, region: "EU", status: "In Match" },
-  ]);
+  // console.log(userStatusMap);
 
   const logs = [
     "2024-12-04 - Player Alice joined matchmaking.",
@@ -49,19 +40,6 @@ export default function Home() {
     "2024-12-04 - Match created: Bob vs. Charlie.",
     "2024-12-04 - Player Dana left matchmaking.",
   ];
-
-  const addFakePlayer = () => {
-    const regions = ["NA", "EU", "ASIA", "SA"];
-    const statuses = ["In Queue", "In Match"];
-    const newPlayer = {
-      id: players.length + 1,
-      name: `Player ${players.length + 1}`,
-      skill: Math.floor(Math.random() * (1400 - 1000 + 1)) + 1000,
-      region: regions[Math.floor(Math.random() * regions.length)],
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-    };
-    setPlayers([...players, newPlayer]);
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-800">
@@ -144,10 +122,10 @@ export default function Home() {
             <div className="bg-gray-50 p-4 rounded-md border border-gray-200 shadow-sm flex flex-col">
               <h3 className="text-lg font-semibold text-gray-800">Match Stats</h3>
               <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between">
+                {/* <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Players:</span>
                   <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.totalPlayers}</span>
-                </div>
+                </div> */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Matches Formed:</span>
                   <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.matchesFormed}</span>

@@ -49,7 +49,6 @@ async function organicallySimulateMatchmaking() {
     setTimeout(() => {
       cooldownMap.delete(userId); // Remove from cooldown after time expires
       userStatusMap.set(userId, "Finished");
-      console.log(`User ${userId} is back in the matchmaking pool.`);
     }, cooldownTime);
   };
 
@@ -57,25 +56,24 @@ async function organicallySimulateMatchmaking() {
     const eligibleUser = getEligibleUser();
     if (eligibleUser) {
       userStatusMap.set(eligibleUser.id, "Joining");
-      console.log(`Simulating matchmaking for user: ${eligibleUser.id}`);
-      await simulateUser("us-east-1", eligibleUser.id, userTracker, channelTracker, (userID) => {
-        userTracker.push(userID);
-      }, (channelID) => {
+      await simulateUser(eligibleUser.id, userTracker, channelTracker, (channelID) => {
         if(channelTracker.length > 100){
           channelTracker.pop();
         }
-        channelTracker.push(channelID);
+        if(!channelTracker.includes(channelID)){
+          channelTracker.push(channelID);
+        }
       }); // Simulate matchmaking
       userStatusMap.set(eligibleUser.id, "InMatch");
+      userTracker = getUserIdsWithoutCooldown();
 
       // Simulate user finishing a match
       setTimeout(() => {
         userStatusMap.set(eligibleUser.id, "Finished");
-        console.log(`User ${eligibleUser.id} finished a match.`);
         setCooldown(eligibleUser.id); // Apply cooldown
       }, Math.floor(Math.random() * (15000 - 5000 + 1)) + 5000); // Match duration 5-15 seconds
     } else {
-      console.log("No eligible users for simulation at this time.");
+      // console.log("No eligible users for simulation at this time.");
     }
   }, Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000); // Random delay between 1-5 seconds
 }
@@ -85,75 +83,119 @@ async function organicallySimulateMatchmaking() {
  */
 async function initializeUsers() {
   try {
-    const response = await chat.getUsers({ limit: 100, sort: {name: "desc"} });
-    if (response) {
-      users = await cleanUserData(response.users);
+    let users = await fetchUsersByIds([
+      "7094df60-11d9-47fe-8690-10b5932b3a29",
+      "5c44ac5e-23eb-455f-8100-23ba69969225",
+      "3b598d50-3582-4284-b2eb-ca1842bd1ae2",
+      "0812a3db-ea89-40a4-ad79-c3acc4a2e578",
+      "1f18ae65-398b-4718-8fa4-18bcee5cfb22",
+      "1444d002-6145-4521-a47a-c1ffedfb9765",
+      "eb688e7b-7b5d-4a4f-af16-a842f6a15845",
+      "62ad1b37-fe77-40ec-895c-572ad0b7232a",
+      "5d62b43b-7216-4257-8f85-001871f65981",
+      "user-998",
+      "user-959",
+      "user-949",
+      "user-937",
+      "user-913",
+      "user-911",
+      "user-910",
+      "user-908",
+      "user-898",
+      "user-880",
+      "user-866",
+      "user-848",
+      "user-847",
+      "user-837",
+      "user-833",
+      "user-825",
+      "user-816",
+      "user-811",
+      "user-790",
+      "user-778",
+      "user-761",
+      "user-759",
+      "user-755",
+      "user-741",
+      "user-740",
+      "user-74",
+      "user-730",
+      "user-727",
+      "user-719",
+      "user-707",
+      "user-706",
+      "user-703",
+      "user-702",
+      "user-701",
+      "user-666",
+      "user-649",
+      "user-615",
+      "user-58",
+      "user-560",
+      "user-557",
+      "user-555",
+      "user-549",
+      "user-540",
+      "user-531",
+      "user-525",
+      "user-515",
+      "user-50",
+      "user-498",
+      "user-495",
+      "user-490",
+      "user-483",
+      "user-457",
+      "user-434",
+      "user-427",
+      "user-404",
+      "user-399",
+      "user-390",
+      "user-387",
+      "user-380",
+      "user-355",
+      "user-352",
+      "user-342",
+      "user-33",
+      "user-327",
+      "user-318",
+      "user-317",
+      "user-311",
+      "user-293",
+      "user-279",
+      "user-260",
+      "user-252",
+      "user-248",
+      "user-243",
+      "user-213",
+      "user-197",
+      "user-19",
+      "user-177",
+      "user-173",
+      "user-162",
+      "user-161",
+      "user-14",
+      "user-139",
+      "user-124",
+      "user-116",
+      "da8a747f-b0fe-4bf4-bfe3-8360abac4a85",
+      "9bd55bd5-1ca0-4fd1-b9b4-b2f26240d709",
+      "24d48e78-5dbe-440f-8887-40ba51a947f7",
+      "d1d32a18-a9b4-4e3d-aa09-6a914091c45a",
+      "5acc0c67-8355-4aea-b202-9fa376151826",
+      "001b97ba-d6d3-4aff-b0b1-faa7f167a13c",
+      "eeb379d1-5224-46a5-9706-8b89eeb5e747"
+    ]);
 
-      startMembershipCheckInterval();
+    if (users) {
+      users = await cleanUserData(users);
 
       users.forEach((user) => {
         userStatusMap.set(user.id, "Finished");
       });
-
-      console.log("Users initialized and status map updated.");
     }
   } catch (error) {
     console.error("Error fetching users:", error);
   }
-}
-
-// Sequential execution using setTimeout
-async function startMembershipCheckInterval() {
-  try {
-    await checkForOutDatedMemberships();
-  } catch (error) {
-    console.error("Error checking memberships:", error);
-  } finally {
-    setTimeout(startMembershipCheckInterval, 60 * 1000); // Wait 1 minute before next call
-  }
-}
-
-
-async function checkForOutDatedMemberships() {
-  const tenMinutesInTimetokens = 10 * 60 * 1000 * 10_000; // 10 minutes in timeToken units
-
-  await Promise.all(
-    users.map(async (user) => {
-      try {
-        const obj = await user.getMemberships();
-        const memberships = obj.memberships;
-
-        memberships.forEach((membership: Membership) => {
-          try {
-            const timeToken = membership.lastReadMessageTimetoken;
-
-            // Handle undefined timeToken
-            if (timeToken === undefined) {
-              console.warn(`timeToken is undefined for channel: ${membership.channel.id}`);
-              return; // Skip processing this membership
-            }
-
-            const timeTokenBigInt = BigInt(timeToken); // Convert to BigInt
-            const currentTimeToken = BigInt(Date.now()) * BigInt(10_000); // Current time in timeToken format
-            const isOlderThanTenMinutes = currentTimeToken - timeTokenBigInt > BigInt(tenMinutesInTimetokens);
-
-            const channelId = membership.channel.id;
-            const startsWithCondition =
-              channelId.startsWith("game-lobby") || channelId.startsWith("pre-lobby");
-
-            if (isOlderThanTenMinutes && startsWithCondition) {
-              membership.channel.delete();
-              console.log(`Channel ${channelId} has been deleted`);
-            }
-          } catch (membershipError) {
-            console.error(`Error processing membership for channel ${membership.channel.id}:`, membershipError);
-          }
-        });
-      } catch (userError) {
-        console.error(`Error retrieving memberships for user ${user.id}:`, userError);
-      }
-    })
-  );
 }
 
 /**
@@ -216,6 +258,27 @@ async function cleanUserData(users: User[]): Promise<User[]> {
   return allUsers;
 }
 
+async function fetchUsersByIds(ids: string[]): Promise<User[]> {
+  if(chat){
+    try {
+      // Create the filter expression for the given list of IDs
+      const filterExpression = ids.map((id) => `id == "${id}"`).join(" || ");
+
+      // Fetch users from PubNub with the filter expression
+      const response = await chat.getUsers({
+        limit: 100, // Adjust the limit if necessary
+        filter: filterExpression,
+      });
+
+      return response.users; // Return the list of fetched users
+    } catch (error) {
+      console.error("Error fetching users by IDs:", error);
+      return [];
+    }
+  }
+  return [];
+}
+
 /*
  * Generates an elo value with a long-tail distribution between 0 and 3000.
  * The result is skewed towards lower values, with fewer high-end values.
@@ -224,4 +287,8 @@ function generateLongTailElo() {
   const maxElo = 3000;
   const random = Math.random();
   return Math.floor(maxElo * Math.pow(random, 3)); // Cubic distribution for long tail
+}
+
+function getUserIdsWithoutCooldown(): string[] {
+  return Array.from(userStatusMap.keys()).filter((userId) => !cooldownMap.has(userId));
 }

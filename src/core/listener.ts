@@ -1,20 +1,15 @@
-import { Chat, Membership, User } from "@pubnub/chat";
+import { Chat, User } from "@pubnub/chat";
 import { getPubNubChatInstance, getPubNubInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
-import { getChannelMembersWithHandling, getOrCreateChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
+import { getOrCreateChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { retryOnFailure, isTransientError } from "../utils/error";
-import PubNub from "pubnub";
 
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval (in milliseconds) to run the matchmaking process
-let regionChannelID = 'matchmaking-us-east-1';
+const regionChannelID = "matchmaking-us-east-1";
 const serverID = "server";
-const avgWaitTime = 0;
 
-// A queue to hold users waiting to be processed
-let matchmakingQueue: Membership[] = [];
-
-// Array to track user IDs currently being processed
-let processingUserIds: string[] = [];
+// A map to track users waiting to be processed
+let matchmakingQueue: Map<string, { userId: string; message: string }> = new Map();
 
 // Flag to indicate if the queue is currently being processed
 let isProcessingQueue = false;
@@ -28,128 +23,83 @@ let isProcessingQueue = false;
  */
 export async function startListener() {
   const chat = await getPubNubChatInstance(serverID);
-  const pubnub = await getPubNubInstance(serverID);
 
-  await clearMemberships(chat, pubnub);
-
-  // Set up an interval to repeatedly run the matchmaking logic for this region
-  setInterval(async () => {
-    try {
-      await handleMatchmaking(chat);
-    } catch (e) {
-      console.error("Critical error in matchmaking loop:", e);
-    }
-  }, MATCHMAKING_INTERVAL_MS); // Run matchmaking logic at the specified interval
-}
-
-async function clearMemberships(chat: Chat, pubnub: PubNub) {
+  // Set up the matchmaking channel
   const regionChannel = await getOrCreateChannel(chat, regionChannelID);
 
   if (regionChannel) {
-    try {
-      // Fetch members with retry and graceful fallback on failure
-      const members: Membership[] = await retryOnFailure(
-        () => getChannelMembersWithHandling(regionChannel),
-        3, // Max retries
-        1000 // Retry delay in milliseconds
-      );
 
-      if (members.length > 0) {
-        // Extract UUIDs of all members
-        const memberUUIDs = members.map((member) => member.user.id);
+    // Add a message listener for the matchmaking channel
+    regionChannel.join(async (message) => {
+      const userId = message.userId;
+      const messageContent = message.content.text;
 
-        // Remove all members from the channel
-        await pubnub.objects.removeChannelMembers({
-          channel: regionChannelID,
-          uuids: memberUUIDs, // Remove all member UUIDs
-        });
-
-        console.log(
-          `Successfully cleared ${memberUUIDs.length} members from the channel ${regionChannelID}.`
-        );
-      } else {
-        console.log(`No members found in the channel ${regionChannelID}.`);
+      // Add the user to the matchmaking queue if not already queued
+      if (!matchmakingQueue.has(userId)) {
+        matchmakingQueue.set(userId, { userId, message: messageContent });
       }
-    } catch (error) {
-      console.error(`Failed to clear memberships for channel ${regionChannelID}:`, error);
-    }
+    });
+
+    // Run the matchmaking process at regular intervals
+    setInterval(async () => {
+      try {
+        await processMatchmakingQueue(chat);
+      } catch (e) {
+        console.error("Critical error in matchmaking loop:", e);
+      }
+    }, MATCHMAKING_INTERVAL_MS);
   } else {
-    console.warn(`Region channel ${regionChannelID} could not be found or created.`);
+    console.error(`Failed to set up the matchmaking channel: ${regionChannelID}`);
   }
 }
 
-
-async function handleMatchmaking(chat: Chat) {
-  try {
-    let regionChannel = await getOrCreateChannel(chat, regionChannelID);
-
-    if(regionChannel){
-      // Fetch members with retry and graceful fallback on failure
-      const members: Membership[] = await retryOnFailure(
-        () => getChannelMembersWithHandling(regionChannel),
-        3,
-        1000
-      );
-
-      if (members.length === 0) {
-        console.warn("No members retrieved");
-      }
-      else {
-        console.log(`Found ${members.length} in channel`);
-      }
-
-      await enqueueMatchmakingUsers(members);
-
-      // Process matchmaking queue
-      await processMatchmakingQueue();
-    }
-  } catch (e) {
-    console.error("Request Failed Trying Again", e);
-  }
-}
-
-// Enqueue members for matchmaking
-async function enqueueMatchmakingUsers(members: Membership[]) {
-  for (const member of members) {
-    if (!processingUserIds.includes(member.user.id)) {
-      processingUserIds.push(member.user.id);
-    }
-    // Add user to matchmakingQueue if not already in the queue
-    if (!matchmakingQueue.some((queuedMember) => queuedMember.user.id === member.user.id)) {
-      matchmakingQueue.push(member);
-    }
-  }
-}
-
-// Process users in the matchmaking queue
-async function processMatchmakingQueue() {
-  console.log(`Found ${matchmakingQueue.length} ready to be processed`);
-  console.log(`Found ${processingUserIds.length} UserIDs for processing`);
-
-  if (isProcessingQueue || matchmakingQueue.length < 2) return;
+/**
+ * Process users in the matchmaking queue
+ */
+async function processMatchmakingQueue(chat: Chat) {
+  if (isProcessingQueue || matchmakingQueue.size < 2) return;
 
   isProcessingQueue = true;
-  console.log("Processing");
 
   try {
-    const usersToProcess: Membership[] = matchmakingQueue.splice(0, matchmakingQueue.length);
-    const userIds = usersToProcess.map((member) => member.user.id);
+    // Extract all users from the queue
+    const usersToProcess = Array.from(matchmakingQueue.values());
+    const userIds = usersToProcess.map((entry) => entry.userId);
 
-    for (const member of usersToProcess) {
-      const userId = member.user.id;
-      await kickUserFromMatchmakingChannel(member.user, regionChannelID);
-      await notifyClientMatchmakingStarted(userId, userIds);
+    // Fetch user details and filter out null values
+    const userDetails: User[] = (
+      await Promise.all(userIds.map((userId) => chat.getUser(userId)))
+    ).filter((user): user is User => user !== null);
+
+    console.log("CURRENT QUEUE");
+    console.log(userDetails.length);
+    for (const user of userDetails) {
+      console.log(user.name);
+    }
+
+    // Notify clients and process matchmaking
+    for (const user of usersToProcess) {
+      await notifyClientMatchmakingStarted(user.userId, userIds);
+      matchmakingQueue.delete(user.userId); // Ensure the user is removed from the queue after processing
     }
 
     await notifyTestingClientUsersMatchmaking(userIds);
-    processMatchMaking(usersToProcess);
 
-    processingUserIds = processingUserIds.filter((id) => !userIds.includes(id));
-    matchmakingQueue = matchmakingQueue.filter((member) => !userIds.includes(member.user.id));
+    // Pass user details into the matchmaking logic
+    processMatchMaking(userDetails, (unpaired: string[]) => {
+      // Re-add unpaired users to the matchmaking queue
+      console.log("UNPAIRED USERIDs");
+      for (const userId of unpaired) {
+        console.log(userId);
+        if (!matchmakingQueue.has(userId)) {
+          matchmakingQueue.set(userId, { userId, message: "Re-queued for matchmaking" });
+        }
+      }
+    });
   } catch (error) {
     console.error("Error processing matchmaking queue:", error);
   } finally {
-    console.log("Finished Processing Batch");
+    // console.log("Finished processing matchmaking batch");
     isProcessingQueue = false;
   }
 }
@@ -179,48 +129,6 @@ async function notifyClientMatchmakingStarted(userId: string, userIds: string[])
       console.error("Failed to notify client that matchmaking started: ", userId);
     }
   }, 3, 2000);
-}
-
-/**
- * Remove a user from the matchmaking channel
- *
- * This function removes (or "kicks") a user from the matchmaking channel once their request starts processing.
- *
- * @param user - The User object representing the user to remove from the matchmaking channel.
- * @param regionChannelID - The ID of the region-specific matchmaking channel.
- */
-async function kickUserFromMatchmakingChannel(user: User, regionChannelID: string) {
-  // Retry the kick logic if there is a transient error
-  await retryOnFailure(async () => {
-    try {
-      // Update user metadata to represent that the user is searching for a match
-      await updatePlayerMetadataWithRetry(user, {
-        searching: true,
-      });
-
-      // Get the user's specific PubNub instance (user chat session)
-      const userChatInstance = await getPubNubChatInstance(user.id);
-
-      // Get the region-specific matchmaking channel that the user is currently in
-      const userChannel = await userChatInstance.getChannel(regionChannelID);
-
-      if (!userChannel) {
-        console.error("User is not currently in the channel, unable to remove membership");
-        return;
-      }
-
-      // Attempt to remove the user from the matchmaking channel (leave the channel)
-      await userChannel.leave();
-    } catch (error) {
-      if (isTransientError(error)) {
-        console.warn("Transient error in kickUserFromMatchmakingChannel (listener.TS): ", error);
-        throw error; // Allow retry logic in retryOnFailure
-      } else {
-        console.error("Critical error in kickUserFromMatchmakingChannel (listener.TS), aborting request: ", error);
-        return; // Return an empty array or handle gracefully
-      }
-    }
-  }, 3, 2000); // Retry up to 3 times with a 2-second delay between attempts
 }
 
 // Testing Server to Client Functions

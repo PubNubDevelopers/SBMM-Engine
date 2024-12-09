@@ -1,6 +1,6 @@
 import { Channel, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../utils/pubnub";
-import { pairMembersBySkill } from "./sbm";
+import { pairUsersBySkill } from "./sbm";
 import { getOrCreateChannel, notifyClient, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { delay } from "../utils/general";
 import { retryOnFailure } from "../utils/error";
@@ -8,21 +8,26 @@ import { retryOnFailure } from "../utils/error";
 const serverID = "server"
 type MatchmakingCallback = (player1: User, player2: User) => Promise<void> | void;
 
+let userIDs: string[] = [];
+
 /**
  * Process matchmaking logic
  *
  * This function receives a list of players/members and pairs them up based on predefined criteria
  * (such as skill level and latency). After pairing the members, it triggers the pre-lobby setup where players
- * will confirm their participation in the match.
+ * will confirm their participation in the match. Unpaired user IDs are added to the list and passed back through a callback.
  *
  * @param members - List of players or users to be paired for matchmaking.
- * @param latencyMap - A map of latencies between the users.
+ * @param onMatched - Callback function to handle matched and unpaired user IDs.
  */
-export async function processMatchMaking(members: any[]) {
+export async function processMatchMaking(
+  members: User[],
+  onFinish: (unpaired: string[]) => void
+) {
   // Pair members using the latency and skill-based matchmaking algorithm
-  const pairs = pairMembersBySkill(members);
+  const { pairs, unpaired } = pairUsersBySkill(members);
 
-  // Iterate over each pair of players
+  // Process each pair of players
   for (const [player1, player2] of pairs) {
     // Notify Testing Client of Matched Players
     await notifyTestingClientofMatchedUsers(player1.id, player2.id);
@@ -30,6 +35,9 @@ export async function processMatchMaking(members: any[]) {
     // Create a pre-lobby listener to handle confirmation between the two players
     await createPreLobbyListener(player1, player2);
   }
+
+  // Pass matched and unpaired user IDs to the callback
+  onFinish(unpaired);
 }
 
 /**
@@ -124,7 +132,6 @@ async function createPreLobbyListener(player1: User, player2: User) {
         await simulateGame(player1, player2);
         await notifyClientofMatchFinished(player1.id, player2.id);
       } else if (result === 'timeout') {
-        console.log('Timeout: Both players did not confirm within 30 seconds');
         await punishUnconfirmedPlayers(player1, player2, player1Confirmed, player2Confirmed);
         await sendTextWithRetry(preLobbyChannel, "TIMEOUT");
       }
@@ -139,7 +146,6 @@ async function punishUnconfirmedPlayers(player1: User, player2: User, player1Con
   try {
     if (!player1Confirmed) {
       await updatePlayerMetadataWithRetry(player1, { punished: true, searching: false, confirmed: false });
-      console.log(`Player ${player1.id} has been punished.`);
       if (player2Confirmed) {
         await updatePlayerMetadataWithRetry(player2, { searching: false, confirmed: false });
       }
@@ -147,7 +153,6 @@ async function punishUnconfirmedPlayers(player1: User, player2: User, player1Con
 
     if (!player2Confirmed) {
       await updatePlayerMetadataWithRetry(player2, { punished: true, searching: false, confirmed: false });
-      console.log(`Player ${player2.id} has been punished.`);
       if (player1Confirmed) {
         await updatePlayerMetadataWithRetry(player1, { searching: false, confirmed: false });
       }
@@ -183,8 +188,6 @@ async function createChannelLobby(player1: User, player2: User, preLobbyChannel:
 
     // Testing: Notify web client of users in match
     await notifyTestingClientofUsersInMatch(player1.id, player2.id);
-
-    console.log(`Game lobby created for players ${player1.id} and ${player2.id}`);
   } catch (error) {
     console.error("Error in createChannelLobby:", error);
   }

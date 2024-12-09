@@ -77,7 +77,6 @@ export async function getChannelMembersWithHandling(channel: Channel): Promise<M
 export async function updatePlayerMetadataWithRetry(player: User, metadata: Record<string, any>) {
   await retryOnFailure(async () => {
     await updatePlayerMetadata(player, metadata);
-    console.log(`Metadata updated for player ${player.id}:`, metadata);
   }, 3, 1000);
 }
 
@@ -103,7 +102,6 @@ export async function getOrCreateChannel(chat: Chat, channelId: string) {
 export async function sendTextWithRetry(channel: Channel, message: string) {
   await retryOnFailure(async () => {
     await channel.sendText(message);
-    console.log(`Message "${message}" sent to channel ${channel.id}`);
   }, 3, 1000);
 }
 
