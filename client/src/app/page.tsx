@@ -131,7 +131,7 @@ export default function Home() {
                   <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.matchesFormed}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Avg. Match Time:</span>
+                  <span className="text-sm text-gray-600">Last Wait Time:</span>
                   <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.avgWaitTime?.toFixed(2)}s</span>
                 </div>
               </div>
