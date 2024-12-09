@@ -215,7 +215,7 @@ async function updateStatsUser(chat: Chat, startTime: number, userTracker: strin
     var matchesFormed = user.custom?.matchesFormed ?? 0;
 
     totalPlayers = userTracker.length;
-    avgWaitTime = (avgWaitTime * matchesFormed + timeDifferenceInSeconds) / (matchesFormed + 1);
+    avgWaitTime += (timeDifferenceInSeconds - avgWaitTime) / (matchesFormed + 1);
     matchesFormed = matchesFormed + 1;
 
     const json = {
