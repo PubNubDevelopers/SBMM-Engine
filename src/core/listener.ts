@@ -37,6 +37,9 @@ export async function startListener() {
       // Add the user to the matchmaking queue if not already queued
       if (!matchmakingQueue.has(userId)) {
         matchmakingQueue.set(userId, { userId, message: messageContent });
+        const usersToProcess = Array.from(matchmakingQueue.values());
+        const userIds = usersToProcess.map((entry) => entry.userId);
+        await notifyTestingClientUsersMatchmaking(userIds);
       }
     });
 
@@ -82,8 +85,6 @@ async function processMatchmakingQueue(chat: Chat) {
       await notifyClientMatchmakingStarted(user.userId, userIds);
       matchmakingQueue.delete(user.userId); // Ensure the user is removed from the queue after processing
     }
-
-    await notifyTestingClientUsersMatchmaking(userIds);
 
     // Pass user details into the matchmaking logic
     processMatchMaking(userDetails, (unpaired: string[]) => {
