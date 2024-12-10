@@ -194,31 +194,45 @@ async function createChannelLobby(player1: User, player2: User, preLobbyChannel:
 }
 
 async function simulateGame(player1: User, player2: User) {
-  // Define constants for Elo calculation
-  const K_FACTOR = 32; // Common value for Elo calculation
-  // Wait for a random time between 30 seconds and 10 minutes
-  const waitTime = Math.floor(Math.random() * (600000 - 30000 + 1)) + 30000; // Random time between 30s (30000ms) and 10m (600000ms)
+  const K_FACTOR = 32; // Standard K-factor
+  const minChange = 4;
+  const maxChange = 32;
+
+  // Simulate a random wait time between 30s and 10m
+  const waitTime = Math.floor(Math.random() * (600000 - 30000 + 1)) + 30000;
   await new Promise(resolve => setTimeout(resolve, waitTime));
 
-  // Simulate game result: randomly choose a winner
-  const player1Wins = Math.random() > 0.5;
+  // Introduce static skill factors
+  const player1Skill = player1.custom?.skill || Math.random() * 100;
+  const player2Skill = player2.custom?.skill || Math.random() * 100;
+
+  // Simulate game outcome based on skill
+  const player1Wins = Math.random() < player1Skill / (player1Skill + player2Skill);
 
   // Calculate expected scores
   const player1Expected = 1 / (1 + Math.pow(10, (player2.custom?.elo - player1.custom?.elo) / 400));
-  const player2Expected = 1 / (1 + Math.pow(10, (player1.custom?.elo - player2.custom?.elo) / 400));
 
-  // Calculate new Elo scores
-  const player1NewElo = player1.custom?.elo + K_FACTOR * ((player1Wins ? 1 : 0) - player1Expected);
-  const player2NewElo = player2.custom?.elo + K_FACTOR * ((player1Wins ? 0 : 1) - player2Expected);
+  // Calculate Elo change
+  let eloChange = K_FACTOR * ((player1Wins ? 1 : 0) - player1Expected);
+  eloChange = Math.max(minChange, Math.min(maxChange, Math.abs(eloChange))) * Math.sign(eloChange);
+
+  // Add skill drift
+  const drift = (Math.random() - 0.5) * 10;
+
+  // Apply Elo changes with drift
+  const player1NewElo = Math.max(0, Math.round(player1.custom?.elo + eloChange + drift));
+  const player2NewElo = Math.max(0, Math.round(player2.custom?.elo - eloChange - drift));
 
   // Update player metadata with new Elo scores and confirmed status
   await updatePlayerMetadataWithRetry(player1, {
-    elo: Math.round(player1NewElo),
+    elo: player1NewElo,
     confirmed: false,
+    skill: player1Skill, // Persist skill for future simulations
   });
   await updatePlayerMetadataWithRetry(player2, {
-    elo: Math.round(player2NewElo),
+    elo: player2NewElo,
     confirmed: false,
+    skill: player2Skill, // Persist skill for future simulations
   });
 }
 

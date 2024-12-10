@@ -232,7 +232,7 @@ async function cleanUserData(users: User[]): Promise<User[]> {
       }
 
       updatedData.custom = {
-        elo: user.custom?.elo ?? (needsUpdate = true, generateLongTailElo()),
+        elo: generateLongTailElo(),
         punished: user.custom?.punished ?? (needsUpdate = true, false),
         confirmed: user.custom?.confirmed ?? (needsUpdate = true, false),
         inMatch: user.custom?.inMatch ?? (needsUpdate = true, false),
