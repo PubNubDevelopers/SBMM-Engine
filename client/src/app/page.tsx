@@ -255,20 +255,6 @@ export default function Home() {
             ))}
           </ul>
         </section>
-
-        {/* API Calls & Code */}
-        {/* <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800">API & Code Insights</h2>
-          <p className="text-sm text-gray-600 mt-2">
-            Explore the API calls and implementation details for this demo.
-          </p>
-          <pre className="bg-gray-100 p-4 mt-4 rounded-lg text-sm text-gray-800 border border-gray-300 shadow-sm">
-            {`pubnub.publish({
-  channel: 'matchmaking',
-  message: { skill: 1200, latency: 50 }
-});`}
-          </pre>
-        </section> */}
       </main>
 
       {/* Footer */}
