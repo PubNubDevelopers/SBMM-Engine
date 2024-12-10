@@ -1,10 +1,8 @@
-import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
+import { Channel, Chat, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../../src/utils/pubnub";
-import { updateChannelStatus } from "../api/membership";
 import { retryOnFailure } from "../utils/error";
 import { updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 
-type UserTrackCallBackFunction = (data: string) => void;
 type ChannelTrackCallBackFunction = (data: string) => void;
 
 /**

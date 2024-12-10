@@ -15,7 +15,7 @@ export default function Home() {
     userStatusMap = new Map<string, string>(),
     recentMatchedUsers,
     statsUser,
-    logs: log,
+    logs,
     allUsers = []
   } = context || {};
 
@@ -26,20 +26,6 @@ export default function Home() {
   const toggleExpandAllBuckets = () => {
     setIsExpanded((prev) => !prev);
   };
-
-  const toggleShowLogs = () => {
-    setShowAllLogs(!showAllLogs);
-  };
-
-  // console.log(userStatusMap);
-
-  const logs = [
-    "2024-12-04 - Player Alice joined matchmaking.",
-    "2024-12-04 - Match created: Alice vs. Dana.",
-    "2024-12-04 - Player Eve joined matchmaking.",
-    "2024-12-04 - Match created: Bob vs. Charlie.",
-    "2024-12-04 - Player Dana left matchmaking.",
-  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-800">
@@ -264,14 +250,14 @@ export default function Home() {
         <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
           <h2 className="text-xl font-bold text-gray-800">Log History</h2>
           <ul className="mt-4 space-y-2 text-sm text-gray-600">
-            {logs.map((log, index) => (
+            {logs?.slice(-6).reverse().map((log, index) => (
               <li key={index}>{log}</li>
             ))}
           </ul>
         </section>
 
         {/* API Calls & Code */}
-        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
+        {/* <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
           <h2 className="text-xl font-bold text-gray-800">API & Code Insights</h2>
           <p className="text-sm text-gray-600 mt-2">
             Explore the API calls and implementation details for this demo.
@@ -282,7 +268,7 @@ export default function Home() {
   message: { skill: 1200, latency: 50 }
 });`}
           </pre>
-        </section>
+        </section> */}
       </main>
 
       {/* Footer */}

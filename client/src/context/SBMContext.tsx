@@ -307,7 +307,16 @@ const hydrateUsers = async (users: User[]) => {
   * Includes a timestamp and formatted message for tracking actions in real-time.
   */
   const logAction = (action: string) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+    }).format(new Date());
+
     const logMessage = `${timestamp} - ${action}\n`;
     setLogs((prevLogs) => [...prevLogs, logMessage]); // Append new log entry to logs state
   };
@@ -338,196 +347,143 @@ const hydrateUsers = async (users: User[]) => {
   * Maintains recentMatchedUsers state with the latest matched users.
   */
   const startWatchChannel = async () => {
-    // Ensure chat instance is defined before attempting to watch channel
-    if (chat) {
-      const watchChannelID = `Matchmaking-In-Progress-Client-Testing`;
-      let watchChannel = await chat.getChannel(watchChannelID);
+    if (!chat) {
+      console.error("Error watching matchmaking channel: Chat is not defined");
+      return;
+    }
 
-      // If the specified channel does not exist, create a new public conversation channel
-      if (!watchChannel) {
-        // If the channel doesn't exist, create a new one
-        watchChannel = await chat.createPublicConversation({
-          channelId: watchChannelID
-        });
+    const watchChannelID = "Matchmaking-In-Progress-Client-Testing";
+    let watchChannel = await chat.getChannel(watchChannelID);
+
+    // Create channel if it doesn't exist
+    if (!watchChannel) {
+      watchChannel = await chat.createPublicConversation({ channelId: watchChannelID });
+    }
+
+    // Listen for incoming messages
+    watchChannel.join(async (message: Message) => {
+      let parsedMessage;
+      try {
+        parsedMessage = JSON.parse(message.content.text);
+      } catch (error) {
+        console.error("Error parsing message:", error);
+        return;
       }
 
-      // Listen for incoming messages on the matchmaking channel
-      watchChannel.join(async (message: Message) => {
-        // // Get current time
-        // const now = new Date();
+      const userIds: string[] = parsedMessage.matchedUsers || [];
+      const userId = parsedMessage.user;
 
-        // // Generate timetoken (nanoseconds since epoch)
-        // const timetoken = Number(message.timetoken) * 10000; // Milliseconds to nanoseconds
+      // Handle matchmaking events
+      switch (parsedMessage.message) {
+        case "Joining":
+          await handleJoiningEvent(userIds);
+          break;
 
-        // // Convert timetoken back to Date
-        // const timeFromToken = new Date(timetoken / 10_000); // Nanoseconds to milliseconds
+        case "Matched":
+          await handleMatchedEvent(userIds);
+          break;
 
-        // console.log("Date from timetoken:", timeFromToken.toISOString());
-        let parsedMessage: any;
-        try {
-          // Attempt to parse the message content as JSON
-          parsedMessage = JSON.parse(message.content.text);
-        } catch (error) {
-          // Log parsing error and exit if message is not in valid JSON format
-          console.log("Error parsing message: ", error);
-          return;
-        }
+        case "Confirmed":
+          if (userId) {
+            await handleUserStatusUpdate([userId], "Confirmed", "has confirmed their match");
+          } else {
+            console.error("Error: Missing user ID for 'Confirmed' event");
+          }
+          break;
 
-        // Extract user IDs and single user ID from the parsed message
-        const userIds: string[] = parsedMessage.matchedUsers || [];
-        const userId = parsedMessage.user;
+        case "InMatch":
+          await handleUserStatusUpdate(userIds, "InMatch", "is now in a match");
+          break;
 
-        // Handle each type of matchmaking event based on message content
-        switch (parsedMessage.message) {
-          case "Joining":
-            console.log("Joining Request");
-            try {
-              // Filter out existing "Joining" statuses from the map
-              const currentMap = new Map(userStatusMapRef.current);
-              for (const [id, status] of currentMap) {
-                if (status === "Joining") {
-                  currentMap.delete(id);
-                }
-              }
+        case "Finished":
+          await handleFinishedEvent(userIds);
+          break;
 
-              // Add the new user IDs with the "Joining" status
-              for (const id of userIds) {
-                const user: User | undefined = await getUser(id);
-                currentMap.set(id, "Joining");
-
-                if (user) {
-                  logAction(`User ${user.name} is joining the matchmaking.`);
-                } else {
-                  logAction(`User ${id} is joining the matchmaking.`);
-                }
-              }
-
-              // Update the map reference and trigger a re-render
-              userStatusMapRef.current = currentMap;
-              setUserStatusMap(new Map(currentMap)); // React state update for re-render
-            } catch (e) {
-              console.error("Error updating user statuses:", e);
-            }
-            break;
-
-          case "Matched":
-            // For "Matched" events, update status to "Matched" for each user and log action
-            if (userIds.length === 2) {
-              for(const id of userIds){
-                try{
-                  const user: User | undefined = await getUser(id);
-                  // Set user status to "Joining" in the status map using useRef
-                  userStatusMapRef.current.set(id, "Matched");
-                  // Optionally trigger a re-render if the UI needs to reflect this status change
-                  setUserStatusMap(new Map(userStatusMapRef.current));
-                  if(user){
-                    logAction(`User ${user.name} has been matched with another user.`);
-                  }
-                  else{
-                    logAction(`User ${id} has been matched with another user.`);
-                  }
-                }
-                catch(e){
-                  console.error(`Error fetching user ${id}`, e);
-                }
-              }
-            } else {
-              // Log an error if the matched users array does not contain exactly two users
-              console.log("Error receiving matched users for Matched: ", JSON.stringify(parsedMessage));
-            }
-            break;
-
-          case "Confirmed":
-             // For "Confirmed" events, update the status to "Confirmed" for the specified user
-            if (userId) {
-              try{
-                const user: User | undefined = await getUser(userId);
-                // Set user status to "Joining" in the status map using useRef
-                userStatusMapRef.current.set(userId, "Confirmed");
-                // Optionally trigger a re-render if the UI needs to reflect this status change
-                setUserStatusMap(new Map(userStatusMapRef.current));
-                if(user){
-                  logAction(`User ${user.name} has confirmed their match.`);
-                }
-                else{
-                  logAction(`User ${userId} has confirmed their match.`);
-                }
-              }
-              catch(e){
-                console.error(`Error fetching user ${userId}`, e);
-              }
-            } else {
-              // Log an error if no user ID is provided for confirmation
-              console.log("Error receiving user confirmed: ", JSON.stringify(parsedMessage));
-            }
-            break;
-
-          case "InMatch":
-            // For "InMatch" events, update status to "InMatch" for both users and log action
-            if (userIds.length === 2) {
-              for(const id of userIds){
-                const user: User | undefined = await getUser(id);
-                // Set user status to "Joining" in the status map using useRef
-                userStatusMapRef.current.set(id, "InMatch");
-                // Optionally trigger a re-render if the UI needs to reflect this status change
-                setUserStatusMap(new Map(userStatusMapRef.current));
-                if(user){
-                  logAction(`User ${user.name} is now in a match.`);
-                }
-                else{
-                  logAction(`User ${id} is now in a match.`);
-                }
-              }
-
-              // Update recentMatchedUsers with only the most recent matched users
-              const matchedUsers = userIds.map(id => allUsers.find(user => user.id === id)).filter(Boolean) as User[];
-              if (matchedUsers.length === 2) {
-                setRecentMatchedUsers(matchedUsers);
-              }
-              else if(userIds.length == 2){
-                const player1: User | null = await chat.getUser(userIds[0]);
-                const player2: User | null = await chat.getUser(userIds[1]);
-                if(player1 && player2){
-                  setRecentMatchedUsers([player1, player2]);
-                }
-                else{
-                  console.log("Error Finding Users to set recentMatchedUsers");
-                }
-              }
-            } else {
-              // Log an error if the matched users array does not contain exactly two users
-              console.log("Error receiving matched users for InMatch: ", JSON.stringify(parsedMessage));
-            }
-            break;
-
-          case "Finished":
-            // For "Finished" events, update status to "Finished" for each user and log action
-            if (userIds.length > 0) {
-              userIds.forEach(id => {
-                const user: User | undefined = allUsers.find(user => user.id === id);
-                // Set user status to "Joining" in the status map using useRef
-                userStatusMapRef.current.set(id, "Finished");
-                // Optionally trigger a re-render if the UI needs to reflect this status change
-                setUserStatusMap(new Map(userStatusMapRef.current));
-                if(user){
-                  logAction(`User ${user.name} match has finished.`);
-                }
-                else{
-                  logAction(`User ${id}'s match has finished.`);
-                }
-              });
-            }
-            break;
-
-          default:
-            // Log unknown message types to monitor for unexpected event types
-            console.log("Unknown message type: ", parsedMessage.message);
-        }
-      });
-    } else {
-      console.log("Error watching matchmaking channel: Chat is not defined");
-    }
+        default:
+          console.error("Unknown message type:", parsedMessage.message);
+      }
+    });
   };
+
+  /**
+ * Handles "Joining" event: Updates user statuses to "Joining" and logs actions.
+ */
+  async function handleJoiningEvent(userIds: string[]) {
+    try {
+      const currentMap = new Map(userStatusMapRef.current);
+
+      // Remove all existing "Joining" statuses
+      for (const [id, status] of currentMap) {
+        if (status === "Joining") currentMap.delete(id);
+      }
+
+      // Add new users as "Joining"
+      for (const id of userIds) {
+        const user: User | undefined = await getUser(id);
+        currentMap.set(id, "Joining");
+        logAction(`Player ${user?.name || id} is joining the matchmaking.`);
+      }
+
+      // Update state and trigger re-render
+      userStatusMapRef.current = currentMap;
+      setUserStatusMap(new Map(currentMap));
+    } catch (error) {
+      console.error("Error updating user statuses for 'Joining':", error);
+    }
+  }
+
+  /**
+ * Handles "Matched" event: Updates user statuses to "Matched" and logs actions.
+ */
+  async function handleMatchedEvent(userIds: string[]) {
+    if (userIds.length !== 2) {
+      console.error("Matched event requires exactly two user IDs:", userIds);
+      return;
+    }
+
+    try {
+      // Fetch both users in parallel
+      const [player1, player2] = await Promise.all([getUser(userIds[0]), getUser(userIds[1])]);
+
+      // Update statuses and log actions
+      userIds.forEach((id, index) => {
+        const currentUser = index === 0 ? player1 : player2;
+        const otherUser = index === 0 ? player2 : player1;
+
+        userStatusMapRef.current.set(id, "Matched");
+        setUserStatusMap(new Map(userStatusMapRef.current));
+
+        logAction(
+          `Player ${currentUser?.name || id} has been matched with ${otherUser?.name || "another player"}.`
+        );
+      });
+    } catch (error) {
+      console.error("Error handling matched event:", error);
+    }
+  }
+
+  /**
+   * Handles generic user status updates and logging.
+   */
+  async function handleUserStatusUpdate(userIds: string[], status: string, action: string) {
+    try {
+      for (const id of userIds) {
+        const user: User | undefined = await getUser(id);
+        userStatusMapRef.current.set(id, status);
+        setUserStatusMap(new Map(userStatusMapRef.current));
+        logAction(`Player ${user?.name || id} ${action}.`);
+      }
+    } catch (error) {
+      console.error(`Error updating user statuses for ${status}:`, error);
+    }
+  }
+
+  /**
+   * Handles "Finished" event: Updates statuses to "Finished" and logs actions.
+   */
+  async function handleFinishedEvent(userIds: string[]) {
+    await handleUserStatusUpdate(userIds, "Finished", "match has finished");
+  }
 
 
 
