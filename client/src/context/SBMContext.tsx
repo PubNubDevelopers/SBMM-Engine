@@ -466,15 +466,28 @@ const hydrateUsers = async (users: User[]) => {
    * Handles generic user status updates and logging.
    */
   async function handleUserStatusUpdate(userIds: string[], status: string, action: string) {
-    try {
-      for (const id of userIds) {
-        const user: User | undefined = await getUser(id);
-        userStatusMapRef.current.set(id, status);
-        setUserStatusMap(new Map(userStatusMapRef.current));
-        logAction(`Player ${user?.name || id} ${action}.`);
+    if(chat){
+      try {
+        for (const id of userIds) {
+          const user: User | undefined = await getUser(id);
+          userStatusMapRef.current.set(id, status);
+          setUserStatusMap(new Map(userStatusMapRef.current));
+          logAction(`Player ${user?.name || id} ${action}.`);
+        }
+        const matchedUsers = userIds.map(id => allUsers.find(user => user.id === id)).filter(Boolean) as User[];
+        if (matchedUsers.length === 2) {
+          setRecentMatchedUsers(matchedUsers);
+        }
+        else if(userIds.length == 2){
+          const player1: User | null = await chat.getUser(userIds[0]);
+          const player2: User | null = await chat.getUser(userIds[1]);
+          if(player1 && player2){
+            setRecentMatchedUsers([player1, player2]);
+          }
+        }
+      } catch (error) {
+        console.error(`Error updating user statuses for ${status}:`, error);
       }
-    } catch (error) {
-      console.error(`Error updating user statuses for ${status}:`, error);
     }
   }
 
