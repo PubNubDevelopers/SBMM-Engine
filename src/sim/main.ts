@@ -242,15 +242,11 @@ async function cleanUserData(users: User[]): Promise<User[]> {
         searching: user.custom?.searching ?? (needsUpdate = true, false),
       };
 
-      if (needsUpdate) {
-        try {
-          const updatedUser = await user.update(updatedData);
-          allUsers.push(updatedUser);
-        } catch (error) {
-          console.error(`Error updating user ${user.id}:`, error);
-        }
-      } else {
-        allUsers.push(user);
+      try {
+        const updatedUser = await user.update(updatedData);
+        allUsers.push(updatedUser);
+      } catch (error) {
+        console.error(`Error updating user ${user.id}:`, error);
       }
     })
   );
