@@ -173,7 +173,7 @@ async function joinGameLobby(gameLobbyID: string, chat: Chat) {
     throw new Error("Failed to find matchmaking channel"); // Throw an error if the channel is not found
   }
 
-  await gameLobbyChannel.join((_) => {})
+  await gameLobbyChannel.join((_) => {});
 
   // Wait for 2 minutes (120,000 milliseconds)
   await new Promise((resolve) => setTimeout(resolve, 120000));

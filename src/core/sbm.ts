@@ -80,8 +80,5 @@ export function pairUsersBySkill(users: User[]): { pairs: [User, User][], unpair
     }
   }
 
-  console.log("UNPARIED LENGTH");
-  console.log(unpaired.length);
-
   return { pairs, unpaired };
 }
