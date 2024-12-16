@@ -3,6 +3,7 @@ import { getPubNubChatInstance, getPubNubInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
 import { getOrCreateChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { retryOnFailure, isTransientError } from "../utils/error";
+import { subscribeToConstraintsUpdates } from "./constraints";
 
 const MATCHMAKING_INTERVAL_MS = 5000; // Interval (in milliseconds) to run the matchmaking process
 const regionChannelID = "matchmaking-us-east-1";
@@ -28,6 +29,8 @@ export async function startListener() {
   const regionChannel = await getOrCreateChannel(chat, regionChannelID);
 
   if (regionChannel) {
+
+    subscribeToConstraintsUpdates();
 
     // Add a message listener for the matchmaking channel
     regionChannel.join(async (message) => {
@@ -60,6 +63,7 @@ export async function startListener() {
  * Process users in the matchmaking queue
  */
 async function processMatchmakingQueue(chat: Chat) {
+  console.log(matchmakingQueue.size);
   if (isProcessingQueue || matchmakingQueue.size < 2) return;
 
   isProcessingQueue = true;
@@ -74,18 +78,11 @@ async function processMatchmakingQueue(chat: Chat) {
       await Promise.all(userIds.map((userId) => chat.getUser(userId)))
     ).filter((user): user is User => user !== null);
 
-    console.log("CURRENT QUEUE");
-    console.log(userDetails.length);
-    for (const user of userDetails) {
-      console.log(user.name);
-    }
-
     // Notify clients and process matchmaking
     for (const user of usersToProcess) {
       await notifyClientMatchmakingStarted(user.userId, userIds);
       matchmakingQueue.delete(user.userId); // Ensure the user is removed from the queue after processing
     }
-
     // Pass user details into the matchmaking logic
     processMatchMaking(userDetails, (unpaired: string[]) => {
       // Re-add unpaired users to the matchmaking queue

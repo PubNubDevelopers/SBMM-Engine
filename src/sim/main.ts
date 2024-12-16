@@ -19,8 +19,10 @@ export async function simulateMatchmaking() {
     // Initialize PubNub Chat instance
     chat = await getPubNubChatInstance("server");
 
+    console.log("Initializing User");
     // Fetch and clean all users
     await initializeUsers();
+    console.log("Done");
 
     // Start organic matchmaking simulation
     await organicallySimulateMatchmaking();
@@ -54,6 +56,7 @@ async function organicallySimulateMatchmaking() {
 
   setInterval(async () => {
     const eligibleUser = getEligibleUser();
+    console.log(eligibleUser);
     if (eligibleUser) {
       userStatusMap.set(eligibleUser.id, "Joining");
       await simulateUser(eligibleUser.id, userTracker, channelTracker, (channelID) => {
