@@ -1,7 +1,7 @@
 import { Channel, Chat, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../../src/utils/pubnub";
 import { retryOnFailure } from "../utils/error";
-import { updatePlayerMetadataWithRetry } from "../utils/chatSDK";
+import { sendIlluminateData, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 
 type ChannelTrackCallBackFunction = (data: string) => void;
 
@@ -196,6 +196,11 @@ async function updateStatsUser(chat: Chat, startTime: number, userTracker: strin
     const timeDifferenceInSeconds = (endTime - startTime) / 1000;
 
     let user: User | null = await chat.getUser("stats-sim");
+    let channel: Channel | null = await chat.getChannel("stats-sim");
+
+    if(!channel){
+      channel = await chat.createPublicConversation({ channelId: "stats-sim" });
+    }
 
     if(!user){
       user = await chat.createUser("stats-sim", {
@@ -223,6 +228,9 @@ async function updateStatsUser(chat: Chat, startTime: number, userTracker: strin
     }
 
     await updatePlayerMetadataWithRetry(user, json);
+    await sendIlluminateData({
+      waitTime: timeDifferenceInSeconds
+    });
   }
   catch(e){
     console.log("Failed to update stats user: ", e);

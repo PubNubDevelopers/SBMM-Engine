@@ -1,10 +1,17 @@
+import PubNub from 'pubnub';
 import { Channel, Chat, Membership, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "./pubnub";
 import { retryOnFailure, isTransientError } from "./error";
+import { Payload } from 'pubnub/lib/types/core/types/api';
 
 const serverID = "server";
 
-/// Internal
+/// Initialize PubNub
+const pubnub = new PubNub({
+  publishKey: process.env.PUBLISH_KEY!,
+  subscribeKey: process.env.SUBSCRIBE_KEY!,
+  userId: 'Illuminate-Sim',
+});
 
 /**
  * Fetch members from the matchmaking channel
@@ -102,6 +109,15 @@ export async function getOrCreateChannel(chat: Chat, channelId: string) {
 export async function sendTextWithRetry(channel: Channel, message: string) {
   await retryOnFailure(async () => {
     await channel.sendText(message);
+  }, 3, 1000);
+}
+
+export async function sendIlluminateData(message: Payload){
+  await retryOnFailure(async () => {
+    await pubnub.publish({
+      channel: "illuminate-data",
+      message: message
+    });
   }, 3, 1000);
 }
 

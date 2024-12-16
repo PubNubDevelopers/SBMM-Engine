@@ -16,8 +16,11 @@ export default function Home() {
     recentMatchedUsers,
     statsUser,
     logs,
-    allUsers = []
+    allUsers = [],
+    constraints
   } = context || {};
+
+  console.log(constraints);
 
   const [showAllLogs, setShowAllLogs] = useState(false);
   // Track expanded state for all skill buckets together
@@ -154,6 +157,25 @@ export default function Home() {
                 </ul>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
+          <h2 className="text-xl font-bold text-gray-800">Matchmaking Constraints</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            {constraints && constraints instanceof Map ? (
+              [...constraints.entries()].map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex flex-col items-center bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm"
+                >
+                  <h3 className="text-sm font-semibold text-black">{key.replace(/_/g, " ")}</h3>
+                  <p className="text-lg font-bold text-blue-600 mt-2">{value.toString()}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm">No constraints available.</p>
+            )}
           </div>
         </section>
 

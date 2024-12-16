@@ -1,11 +1,21 @@
 "use client"
 
-import { Chat, Membership, Message, User } from "@pubnub/chat";
+import PubNub from "pubnub";
+import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { SBMContext, SkillRange } from "../types/contextTypes";
 
+let ConstraintsType = {
+  MAX_ELO_GAP: 200,
+  WAIT_TIME_WEIGHT: 1.5,
+  SKILL_GAP_WEIGHT: 1.0,
+  REGIONAL_PRIORITY: 2.0,
+  ELO_ADJUSTMENT_WEIGHT: 1.0,
+};
+
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<Chat>();
+  const [pubnub, setPubNub] = useState<PubNub>();
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [statsUser, setStatsUser] = useState<User | undefined>();
   const [skillBuckets, setSkillBuckets] = useState<Map<SkillRange, User[]>>(new Map());
@@ -14,6 +24,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [userStatusMap, setUserStatusMap] = useState<Map<string, string>>(new Map());
   const [logs, setLogs] = useState<string[]>([]);
   const userStatusMapRef = useRef<Map<string, string>>(new Map()); // Use useRef for userStatusMap
+  const [constraints, setConstraints] = useState<Map<string, Number>>(new Map());
 
   /*
   * Initializes the PubNub Chat instance.
@@ -28,7 +39,14 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
         userId: "client-sim"
       });
 
+      const pubnub = new PubNub({
+        publishKey: process.env.PUBLISH_KEY!,
+        subscribeKey: process.env.SUBSCRIBE_KEY!,
+        userId: 'Illuminate-Sim',
+      });
+
       setChat(chat);
+      setPubNub(pubnub);
     }
     catch(e){
       console.error("Failed to initialize PubNub: ", e);
@@ -491,6 +509,67 @@ const hydrateUsers = async (users: User[]) => {
     }
   }
 
+  async function subscribeToIlluminate(){
+    // Simulate backend response
+    const temp_constrainsts = {
+      MAX_ELO_GAP: 200,
+      SKILL_GAP_WEIGHT: 1.0,
+      ELO_ADJUSTMENT_WEIGHT: 1.0,
+    };
+
+    // Convert the object to a Map<string, Number>
+    const constraintsMap = new Map<string, Number>(
+      Object.entries(temp_constrainsts)
+    );
+
+    console.log("Setting Constraints Map");
+
+    setConstraints(constraintsMap);
+
+    if(pubnub){
+      pubnub.subscribe({ channels: ["SBMM-conditions"] });
+
+      pubnub.addListener({
+        message: (messageEvent: any) => {
+          const { message } = messageEvent;
+
+          // Check if the message contains valid keys to update constraints
+          if (typeof message === "object" && message !== null) {
+            const updatedConstraints = constraints;
+
+            // Update only known constraint values
+            if (message.hasOwnProperty("max_skill_gap")) {
+              updatedConstraints.set("MAX_ELO_GAP", message.max_skill_gap);
+            }
+            if (message.hasOwnProperty("skill_gap_weight")) {
+              updatedConstraints.set("SKILL_GAP_WEIGHT", message.skill_gap_weight);
+            }
+            if(message.hasOwnProperty("elo_adustement_weight")){
+              updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", message.elo_adustement_weight);
+            }
+
+
+            // Update constraints and log changes
+            if (Object.keys(updatedConstraints).length > 0) {
+              setConstraints(updatedConstraints);
+            } else {
+              console.warn("Received a message, but no valid constraint updates found:", message);
+            }
+          } else {
+            console.warn("Invalid message format received on SBMM-conditions channel:", message);
+          }
+        },
+        status: (statusEvent) => {
+          if (statusEvent.category === "PNConnectedCategory") {
+            console.log("Subscribed to SBMM-conditions channel");
+          } else {
+            console.log("Status event:", statusEvent);
+          }
+        },
+      });
+    }
+  }
+
   /**
    * Handles "Finished" event: Updates statuses to "Finished" and logs actions.
    */
@@ -520,6 +599,7 @@ const hydrateUsers = async (users: User[]) => {
         await getAllUsers();
         await startWatchChannel();
         await hydrateStats();
+        await subscribeToIlluminate();
       }
     };
 
@@ -536,7 +616,8 @@ const hydrateUsers = async (users: User[]) => {
         userStatusMap,
         logs,
         statsUser,
-        allUsers
+        allUsers,
+        constraints
       }}
     >
     {children}
