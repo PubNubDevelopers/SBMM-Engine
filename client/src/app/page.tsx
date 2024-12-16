@@ -20,8 +20,6 @@ export default function Home() {
     constraints
   } = context || {};
 
-  console.log(constraints);
-
   const [showAllLogs, setShowAllLogs] = useState(false);
   // Track expanded state for all skill buckets together
   const [isExpanded, setIsExpanded] = useState(false);
