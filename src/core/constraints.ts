@@ -55,8 +55,8 @@ export function subscribeToConstraintsUpdates() {
         if (message.hasOwnProperty("skill_gap_weight")) {
           updatedConstraints.SKILL_GAP_WEIGHT = message.skill_gap_weight;
         }
-        if(message.hasOwnProperty("elo_adustement_weight")){
-          updatedConstraints.ELO_ADJUSTMENT_WEIGHT = message.elo_adustement_weight;
+        if(message.hasOwnProperty("elo_adjustment_weight")){
+          updatedConstraints.ELO_ADJUSTMENT_WEIGHT = message.elo_adjustment_weight;
         }
 
 

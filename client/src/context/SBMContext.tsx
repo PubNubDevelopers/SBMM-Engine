@@ -5,14 +5,6 @@ import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { SBMContext, SkillRange } from "../types/contextTypes";
 
-let ConstraintsType = {
-  MAX_ELO_GAP: 200,
-  WAIT_TIME_WEIGHT: 1.5,
-  SKILL_GAP_WEIGHT: 1.0,
-  REGIONAL_PRIORITY: 2.0,
-  ELO_ADJUSTMENT_WEIGHT: 1.0,
-};
-
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<Chat>();
   const [pubnub, setPubNub] = useState<PubNub>();
@@ -531,35 +523,39 @@ const hydrateUsers = async (users: User[]) => {
 
       pubnub.addListener({
         message: (messageEvent: any) => {
+          console.log("MESSSSAGEEGEGEGEGEGE");
           const { message } = messageEvent;
 
-          // Check if the message contains valid keys to update constraints
-          if (typeof message === "object" && message !== null) {
-            const updatedConstraints = constraints;
+          if(message){
+            // Check if the message contains valid keys to update constraints
+            if (message !== null) {
+              const updatedConstraints = constraints;
 
-            // Update only known constraint values
-            if (message.hasOwnProperty("max_skill_gap")) {
-              updatedConstraints.set("MAX_ELO_GAP", message.max_skill_gap);
-            }
-            if (message.hasOwnProperty("skill_gap_weight")) {
-              updatedConstraints.set("SKILL_GAP_WEIGHT", message.skill_gap_weight);
-            }
-            if(message.hasOwnProperty("elo_adustement_weight")){
-              updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", message.elo_adustement_weight);
-            }
+              // Update only known constraint values
+              if (message.hasOwnProperty("max_skill_gap")) {
+                updatedConstraints.set("MAX_ELO_GAP", message.max_skill_gap);
+              }
+              if (message.hasOwnProperty("skill_gap_weight")) {
+                updatedConstraints.set("SKILL_GAP_WEIGHT", message.skill_gap_weight);
+              }
+              if(message.hasOwnProperty("elo_adjustment_weight")){
+                updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", message.elo_adustement_weight);
+              }
 
 
-            // Update constraints and log changes
-            if (Object.keys(updatedConstraints).length > 0) {
-              setConstraints(updatedConstraints);
+              // Update constraints and log changes
+              if (Object.keys(updatedConstraints).length > 0) {
+                setConstraints(updatedConstraints);
+              } else {
+                console.warn("Received a message, but no valid constraint updates found:", message);
+              }
             } else {
-              console.warn("Received a message, but no valid constraint updates found:", message);
+              console.warn("Invalid message format received on SBMM-conditions channel:", message);
             }
-          } else {
-            console.warn("Invalid message format received on SBMM-conditions channel:", message);
           }
         },
         status: (statusEvent) => {
+          console.log(statusEvent);
           if (statusEvent.category === "PNConnectedCategory") {
             console.log("Subscribed to SBMM-conditions channel");
           } else {
@@ -595,7 +591,7 @@ const hydrateUsers = async (users: User[]) => {
   */
   useEffect(() => {
     const initializeUsers = async () => {
-      if (chat) {
+      if (chat && pubnub) {
         await getAllUsers();
         await startWatchChannel();
         await hydrateStats();
@@ -604,7 +600,7 @@ const hydrateUsers = async (users: User[]) => {
     };
 
     initializeUsers();
-  }, [chat]);
+  }, [chat, pubnub]);
 
   return (
     <SBMContext.Provider
