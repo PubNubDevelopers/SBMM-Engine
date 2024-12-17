@@ -5,6 +5,7 @@ import { getOrCreateChannel, notifyClient, sendIlluminateData, sendTextWithRetry
 import { delay } from "../utils/general";
 import { retryOnFailure } from "../utils/error";
 import { getConstraints } from "./constraints";
+import { simulateGame } from "./game";
 
 const serverID = "server"
 type MatchmakingCallback = (player1: User, player2: User) => Promise<void> | void;
@@ -194,74 +195,6 @@ async function createChannelLobby(player1: User, player2: User, preLobbyChannel:
   }
 }
 
-async function simulateGame(player1: User, player2: User) {
-  const { ELO_ADJUSTMENT_WEIGHT } = getConstraints();
-
-  const K_FACTOR = 32; // Standard K-factor
-  const minChange = 4;
-  const maxChange = 32;
-  const NORMALIZED_ELO = 1500; // Target center of skill normalization
-
-  // Simulate a random wait time between 30s and 10m
-  const waitTime = Math.floor(Math.random() * (600000 - 30000 + 1)) + 30000;
-  await new Promise(resolve => setTimeout(resolve, waitTime));
-
-  // Introduce static skill factors
-  const player1Skill = player1.custom?.skill || Math.random() * 100;
-  const player2Skill = player2.custom?.skill || Math.random() * 100;
-
-  // Simulate game outcome based on skill
-  const player1Wins = Math.random() < player1Skill / (player1Skill + player2Skill);
-
-  // Calculate expected scores
-  const player1Expected = 1 / (1 + Math.pow(10, (player2.custom?.elo - player1.custom?.elo) / 400));
-
-  // Calculate base Elo change
-  let eloChange = K_FACTOR * ((player1Wins ? 1 : 0) - player1Expected);
-
-  // Normalize adjustment based on skill
-  const player1DistanceFromNormalized = (player1.custom?.elo || NORMALIZED_ELO) - NORMALIZED_ELO;
-  const player2DistanceFromNormalized = (player2.custom?.elo || NORMALIZED_ELO) - NORMALIZED_ELO;
-
-  // Apply adjustments using a sigmoid-like function for scaling
-  const player1Adjustment = ELO_ADJUSTMENT_WEIGHT / (1 + Math.exp(-player1DistanceFromNormalized / 200)); // Scales based on distance
-  const player2Adjustment = ELO_ADJUSTMENT_WEIGHT / (1 + Math.exp(-player2DistanceFromNormalized / 200));
-
-  // Incorporate adjustments into Elo change
-  eloChange += player1Wins ? player1Adjustment : -player2Adjustment;
-
-  // Clamp Elo change to defined range
-  eloChange = Math.max(minChange, Math.min(maxChange, Math.abs(eloChange))) * Math.sign(eloChange);
-
-  // Add skill drift
-  const drift = (Math.random() - 0.5) * 10;
-
-  // Apply Elo changes with drift
-  const player1NewElo = Math.max(0, Math.round(player1.custom?.elo + eloChange + drift));
-  const player2NewElo = Math.max(0, Math.round(player2.custom?.elo - eloChange - drift));
-
-  // Update player metadata with new Elo scores and confirmed status
-  await updatePlayerMetadataWithRetry(player1, {
-    elo: player1NewElo,
-    confirmed: false,
-    skill: player1Skill, // Persist skill for future simulations
-  });
-  await updatePlayerMetadataWithRetry(player2, {
-    elo: player2NewElo,
-    confirmed: false,
-    skill: player2Skill, // Persist skill for future simulations
-  });
-
-  // Calculate and send Elo-related metrics
-  const eloGap = Math.abs(player1.custom?.elo - player2.custom?.elo);
-  await sendIlluminateData({
-    eloGap: eloGap
-  });
-  await sendIlluminateData({
-    eloMatchAvg: (player1NewElo + player2NewElo) / 2
-  });
-}
-
 // Testing Client Funcitons
 
 // Testing Server to Client Functions
@@ -324,7 +257,4 @@ async function notifyClientofMatchFinished(player1: string, player2: string){
     console.error("Failed to notify testing client for Finished request matcher.ts ", e);
   }
 }
-
-
-
 

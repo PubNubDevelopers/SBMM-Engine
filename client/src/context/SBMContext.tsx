@@ -536,7 +536,7 @@ const hydrateUsers = async (users: User[]) => {
               updatedConstraints.set("SKILL_GAP_WEIGHT", Number(message.skill_gap_weight));
             }
             if(message.hasOwnProperty("elo_adjustment_weight")){
-              updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", Number(message.elo_adustement_weight));
+              updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", Number(message.elo_adjustment_weight));
             }
 
             setConstraints(updatedConstraints);

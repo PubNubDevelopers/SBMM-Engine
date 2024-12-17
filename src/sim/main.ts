@@ -19,10 +19,8 @@ export async function simulateMatchmaking() {
     // Initialize PubNub Chat instance
     chat = await getPubNubChatInstance("server");
 
-    console.log("Initializing User");
     // Fetch and clean all users
     await initializeUsers();
-    console.log("Done");
 
     // Start organic matchmaking simulation
     await organicallySimulateMatchmaking();
@@ -207,23 +205,37 @@ async function initializeUsers() {
 async function cleanUserData(users: User[]): Promise<User[]> {
   const allUsers: User[] = [];
 
-  await Promise.all(users.map(async (user) => {
+  await Promise.all(
+    users.map(async (user) => {
       let needsUpdate = false;
+
       const updatedData: {
         name?: string;
         profileUrl?: string;
         custom: {
           elo: number;
+          totalMatches: number;
+          platform: string;
+          voiceChatEnabled: boolean;
+          consecutiveWins: number;
+          playFrequency: string;
+          matchesPlayed: number;
+          playStyle: string;
+          teamPreference: string;
+          gameModePreference: string;
+          completionRate: number;
+          toxicityLevel: string;
+          latency: number;
+          server: string;
+          searching: boolean;
           punished: boolean;
           confirmed: boolean;
           inMatch: boolean;
           inPreLobby: boolean;
-          server: string;
-          latency: number;
-          searching: boolean;
         };
       } = { custom: {} as any };
 
+      // Username and Profile Image Defaults
       if (!user.name || /^\d/.test(user.name)) {
         updatedData.name = generateUsername();
         needsUpdate = true;
@@ -234,14 +246,29 @@ async function cleanUserData(users: User[]): Promise<User[]> {
         needsUpdate = true;
       }
 
+      // Simulated Matchmaking-Related Fields
+      const matchesPlayed = user.custom?.matchesPlayed ?? Math.floor(Math.random() * 200);
+      const consecutiveWins = user.custom?.consecutiveWins ?? Math.floor(Math.random() * 5);
+
       updatedData.custom = {
-        elo: generateLongTailElo(),
+        elo: user.custom?.elo ?? (needsUpdate = true, generateLongTailElo()),
+        totalMatches: user.custom?.totalMatches ?? (needsUpdate = true, matchesPlayed + Math.floor(consecutiveWins * Math.random() * 2)), // Simulate total matches
+        platform: user.custom?.platform ?? (needsUpdate = true, "PC"),
+        voiceChatEnabled: user.custom?.voiceChatEnabled ?? (needsUpdate = true, Math.random() > 0.5),
+        consecutiveWins: user.custom?.consecutiveWins ?? (needsUpdate = true, consecutiveWins),
+        playFrequency: user.custom?.playFrequency ?? (needsUpdate = true, "Medium"),
+        matchesPlayed: user.custom?.matchesPlayed ?? (needsUpdate = true, matchesPlayed),
+        playStyle: user.custom?.playStyle ?? (needsUpdate = true, "Balanced"),
+        teamPreference: user.custom?.teamPreference ?? (needsUpdate = true, "Solo"),
+        gameModePreference: user.custom?.gameModePreference ?? (needsUpdate = true, "Ranked"),
+        completionRate: user.custom?.completionRate ?? (needsUpdate = true, 90 + Math.random() * 10),
+        toxicityLevel: user.custom?.toxicityLevel ?? (needsUpdate = true, "Low"),
+        latency: user.custom?.latency ?? (needsUpdate = true, Math.floor(Math.random() * 50) + 20),
         punished: user.custom?.punished ?? (needsUpdate = true, false),
         confirmed: user.custom?.confirmed ?? (needsUpdate = true, false),
         inMatch: user.custom?.inMatch ?? (needsUpdate = true, false),
         inPreLobby: user.custom?.inPreLobby ?? (needsUpdate = true, false),
         server: user.custom?.server ?? (needsUpdate = true, "us-east-1"),
-        latency: user.custom?.latency ?? (needsUpdate = true, Math.floor(Math.random() * 100) + 20),
         searching: user.custom?.searching ?? (needsUpdate = true, false),
       };
 
