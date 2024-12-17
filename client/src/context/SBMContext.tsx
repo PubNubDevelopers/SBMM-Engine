@@ -16,6 +16,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [userStatusMap, setUserStatusMap] = useState<Map<string, string>>(new Map());
   const [logs, setLogs] = useState<string[]>([]);
   const userStatusMapRef = useRef<Map<string, string>>(new Map()); // Use useRef for userStatusMap
+  const constraintsRef = useRef<Map<string, Number>>(new Map());
   const [constraints, setConstraints] = useState<Map<string, Number>>(new Map());
 
   /*
@@ -32,8 +33,8 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const pubnub = new PubNub({
-        publishKey: process.env.PUBLISH_KEY!,
-        subscribeKey: process.env.SUBSCRIBE_KEY!,
+        publishKey: process.env.NEXT_PUBLIC_PUBLISH_KEY!,
+        subscribeKey: process.env.NEXT_PUBLIC_SUBSCRIBE_KEY!,
         userId: 'Illuminate-Sim',
       });
 
@@ -514,8 +515,7 @@ const hydrateUsers = async (users: User[]) => {
       Object.entries(temp_constrainsts)
     );
 
-    console.log("Setting Constraints Map");
-
+    constraintsRef.current = constraintsMap;
     setConstraints(constraintsMap);
 
     if(pubnub){
@@ -523,35 +523,25 @@ const hydrateUsers = async (users: User[]) => {
 
       pubnub.addListener({
         message: (messageEvent: any) => {
-          console.log("MESSSSAGEEGEGEGEGEGE");
           const { message } = messageEvent;
 
           if(message){
-            // Check if the message contains valid keys to update constraints
-            if (message !== null) {
-              const updatedConstraints = constraints;
+            const updatedConstraints = constraintsRef.current;
 
-              // Update only known constraint values
-              if (message.hasOwnProperty("max_skill_gap")) {
-                updatedConstraints.set("MAX_ELO_GAP", message.max_skill_gap);
-              }
-              if (message.hasOwnProperty("skill_gap_weight")) {
-                updatedConstraints.set("SKILL_GAP_WEIGHT", message.skill_gap_weight);
-              }
-              if(message.hasOwnProperty("elo_adjustment_weight")){
-                updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", message.elo_adustement_weight);
-              }
-
-
-              // Update constraints and log changes
-              if (Object.keys(updatedConstraints).length > 0) {
-                setConstraints(updatedConstraints);
-              } else {
-                console.warn("Received a message, but no valid constraint updates found:", message);
-              }
-            } else {
-              console.warn("Invalid message format received on SBMM-conditions channel:", message);
+            // Update only known constraint values
+            if (message.hasOwnProperty("max_skill_gap")) {
+              updatedConstraints.set("MAX_ELO_GAP", Number(message.max_skill_gap));
             }
+            if (message.hasOwnProperty("skill_gap_weight")) {
+              updatedConstraints.set("SKILL_GAP_WEIGHT", Number(message.skill_gap_weight));
+            }
+            if(message.hasOwnProperty("elo_adjustment_weight")){
+              updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", Number(message.elo_adustement_weight));
+            }
+
+            setConstraints(updatedConstraints);
+          } else {
+            console.warn("Invalid message format received on SBMM-conditions channel:", message);
           }
         },
         status: (statusEvent) => {
