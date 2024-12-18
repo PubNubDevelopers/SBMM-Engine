@@ -95,7 +95,8 @@ export async function simulateGame(player1: User, player2: User) {
     toxicityDetected: gameToxicity,
     playStyle: player1.custom?.playStyle ?? "Balanced",
     latency: (player1.custom?.latency ?? 100 + player2.custom?.latency ?? 100)/2,
-    completionRate: (player1.custom?.completionRate ?? 100 + player2.custom?.completionRate ?? 100)/2
+    completionRate: (player1.custom?.completionRate ?? 100 + player2.custom?.completionRate ?? 100)/2,
+    eloGap: Math.abs(player1NewElo - player2NewElo)
   });
   await sendIlluminateData({
     playStyle: player2.custom?.playStyle ?? "Balanced",

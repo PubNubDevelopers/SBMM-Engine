@@ -4,8 +4,9 @@ import React, { useContext, useState } from "react";
 import { MdOutlineAccessTime, MdCheckCircle, MdSportsEsports, MdGroup } from "react-icons/md";
 import Image from "next/image";
 import { SBMContext } from "@/context/SBMContext";
-import { SkillRange } from "@/types/contextTypes";
+import { SkillRange, Threshold } from "@/types/contextTypes";
 import { User } from "@pubnub/chat";
+import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
 export default function Home() {
   const context = useContext(SBMContext);
@@ -17,10 +18,14 @@ export default function Home() {
     statsUser,
     logs,
     allUsers = [],
-    constraints
+    constraints,
+    punish_param,
+    increase_rewards,
+    latency_threshold
   } = context || {};
 
-  const [showAllLogs, setShowAllLogs] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   // Track expanded state for all skill buckets together
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -29,39 +34,75 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-gray-800">
+    <div className="min-h-screen flex flex-col bg-gray-900 text-white">
       {/* Hero Section */}
-      <header className="bg-gray-100 p-6 text-center border-b border-gray-300 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">PubNub Skill-Based Matchmaking</h1>
-        <p className="text-gray-600 mt-2">
-          Deliver real-time matchmaking with PubNub's App Context and API.
-        </p>
+      <header className="relative p-12 text-center bg-black">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/background.jpg"
+            alt="Background"
+            layout="fill" // Makes the image fill the parent container
+            objectFit="cover" // Ensures the image covers the container
+            objectPosition="center 10%" // Offsets the image downwards
+            quality={100} // Optional: Image quality (0-100)
+            priority // Ensures the image loads quickly
+          />
+          <div className="absolute inset-0 bg-black opacity-50"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10">
+          <div className="h-4"></div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-wide text-white drop-shadow-lg">
+            Real-Time Dynamic Matchmaking
+          </h1>
+          <p className="text-lg mt-4 max-w-2xl mx-auto text-gray-300 drop-shadow-md">
+            Deliver real-time matchmaking, driven by real-time decisioning.
+          </p>
+          <div className="h-4"></div>
+          {/* <div className="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+            <button
+              onClick={() => window.open("https://www.pubnub.com/", "_blank")}
+              className="w-full sm:w-auto px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition drop-shadow-md"
+            >
+              Get Started Now
+            </button>
+            <button
+              onClick={() => window.open("https://www.pubnub.com/docs", "_blank")}
+              className="w-full sm:w-auto px-6 py-3 bg-transparent border border-white text-white hover:border-white hover:text-white rounded-lg font-semibold transition drop-shadow-md"
+            >
+              Explore Documentation
+            </button>
+          </div> */}
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-col gap-8 p-6">
+      <main className="p-8 space-y-12">
         {/* Active Matchmaking View */}
-        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800">Active Matchmaking</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold text-center mb-8">Active Matchmaking</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Players in Queue */}
-            <div className="col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800">Players in Queue</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-md">
+              <h3 className="text-2xl font-semibold mb-6">Players in Queue</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[...userStatusMap]
-                  .filter(([id, status]) => status === "Joining") // Filter for "Joining" status
-                  .slice(0, 6) // Show only the first 6 players
+                  .filter(([id, status]) => status === "Joining")
+                  .slice(0, 6)
                   .map(([id, status]) => {
-                    const user = allUsers.find((user) => user.id === id); // Find the user in allUsers
-                    if (!user) return null; // Skip rendering if the user is not found
+                    const user = allUsers.find((user) => user.id === id);
+                    if (!user) return null;
 
                     return (
                       <div
                         key={id}
-                        className="flex items-center bg-white p-4 rounded-md shadow-sm border border-gray-200"
+                        className="flex items-center bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition"
                       >
                         {/* Profile Image */}
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-500">
                           <Image
                             src={user.profileUrl || "/assets/Avatar1.png"}
                             alt="Profile"
@@ -70,192 +111,280 @@ export default function Home() {
                             className="object-cover"
                           />
                         </div>
+
                         {/* Player Info */}
                         <div className="ml-4 flex-1">
-                          <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                          <p className="text-xs text-gray-600">
-                            Skill: <span className="text-blue-600">{user.custom.elo}</span> | Region:{" "}
-                            <span className="text-gray-800">{user.custom.server}</span>
+                          <p className="font-semibold">{user.name}</p>
+                          <p className="text-sm text-gray-400">
+                            Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
+                            <span className="text-gray-300">{user.custom.server}</span>
                           </p>
                         </div>
+
                         {/* Status Icon */}
                         <div>
                           {status === "In Queue" && (
-                            <MdOutlineAccessTime
-                              className="text-yellow-500 text-xl"
-                              title="In Queue"
-                            />
+                            <MdOutlineAccessTime className="text-yellow-400 text-2xl" title="In Queue" />
                           )}
                           {status === "In Match" && (
-                            <MdSportsEsports
-                              className="text-green-500 text-xl"
-                              title="In Match"
-                            />
+                            <MdSportsEsports className="text-green-400 text-2xl" title="In Match" />
                           )}
                         </div>
                       </div>
                     );
                   })}
               </div>
+
               {/* View More Button */}
-              {[...userStatusMap].filter(([id, status]) => status === "Joining").length > 6 && (
-                <div className="mt-4 text-center text-gray-500 text-xs">
-                  {[...userStatusMap].filter(([id, status]) => status === "Joining").length} total players in queue
+              {([...userStatusMap].filter(([id, status]) => status === "Joining").length > 6) && (
+                <div className="mt-6 text-center text-gray-400">
+                  {([...userStatusMap].filter(([id, status]) => status === "Joining").length)} total players in queue
                 </div>
-                )}
+              )}
             </div>
 
-            {/* Stats */}
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 shadow-sm flex flex-col">
-              <h3 className="text-lg font-semibold text-gray-800">Match Stats</h3>
-              <div className="mt-4 space-y-3">
-                {/* <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Players:</span>
-                  <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.totalPlayers}</span>
-                </div> */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Matches Formed:</span>
-                  <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.matchesFormed}</span>
+            {/* Match Stats */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+              <h3 className="text-2xl font-semibold mb-6">Match Stats</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Matches Formed:</span>
+                  <span className="text-blue-400 text-lg font-semibold">{statsUser?.custom.matchesFormed}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Last Wait Time:</span>
-                  <span className="text-blue-600 text-lg font-semibold">{statsUser?.custom.avgWaitTime?.toFixed(2)}s</span>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Last Wait Time:</span>
+                  <span className="text-blue-400 text-lg font-semibold">{statsUser?.custom.avgWaitTime?.toFixed(2)}s</span>
                 </div>
               </div>
 
               {/* Recently Matched Players */}
-              <div className="mt-6">
-                <h4 className="text-md font-semibold text-gray-800">Recently Matched Players</h4>
-                <ul className="mt-4 space-y-2">
-                  {recentMatchedUsers && recentMatchedUsers.map((user: User) => (
-                      <li
-                        key={user.id}
-                        className="flex items-center bg-white p-4 rounded-md shadow-sm border border-gray-200"
-                      >
-                        {/* Profile Image */}
-                        <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-300">
-                          <Image
-                            src={user.profileUrl || "/assets/Avatar1.png"}
-                            alt="Profile"
-                            width={40}
-                            height={40}
-                            className="object-cover"
-                          />
-                        </div>
-                        {/* Player Info */}
-                        <div className="ml-4">
-                          <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                          <p className="text-xs text-gray-600">
-                            Skill: <span className="text-blue-600">{user.custom.elo}</span> | Region:{" "}
-                            <span className="text-gray-800">{user.custom.server}</span>
-                          </p>
-                        </div>
-                      </li>
-                    ))}
+              <div className="mt-8">
+                <h4 className="text-lg font-semibold mb-4">Recently Matched Players</h4>
+                <ul className="space-y-3">
+                  {recentMatchedUsers?.map((user: User) => (
+                    <li key={user.id} className="flex items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition">
+                      {/* Profile Image */}
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-500">
+                        <Image
+                          src={user.profileUrl || "/assets/Avatar1.png"}
+                          alt="Profile"
+                          width={40}
+                          height={40}
+                          className="object-cover"
+                        />
+                      </div>
+                      {/* Player Info */}
+                      <div className="ml-4">
+                        <p className="font-semibold">{user.name}</p>
+                        <p className="text-sm text-gray-400">
+                          Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
+                          <span className="text-gray-300">{user.custom.server}</span>
+                        </p>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800">Matchmaking Constraints</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold text-center mb-8">Matchmaking Constraints</h2>
+
+          {/* Constraints Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Static Constraint Cards */}
             {constraints && constraints instanceof Map ? (
               [...constraints.entries()].map(([key, value]) => (
                 <div
                   key={key}
-                  className="flex flex-col items-center bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm"
+                  className="bg-gray-800 p-6 rounded-lg shadow-md text-center hover:bg-gray-700 transition"
                 >
-                  <h3 className="text-sm font-semibold text-black">{key.replace(/_/g, " ")}</h3>
-                  <p className="text-lg font-bold text-blue-600 mt-2">{value.toString()}</p>
+                  <h3 className="text-lg font-semibold mb-3">{key.replace(/_/g, " ")}</h3>
+                  <p className="text-2xl font-bold text-blue-400">{value.toString()}</p>
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-sm">No constraints available.</p>
+              <p className="text-gray-400 text-center col-span-3">No constraints available.</p>
             )}
+
+            {/* Dropdown for Additional Components */}
+            <div className="col-span-1 md:col-span-3">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full flex items-center justify-between bg-gray-800 text-white p-4 rounded-lg hover:bg-gray-700 transition"
+              >
+                <span className="text-lg font-semibold">Additional Constraints</span>
+                {isDropdownOpen ? (
+                  <FaChevronUp className="w-6 h-6 text-blue-400" />
+                ) : (
+                  <FaChevronDown className="w-6 h-6 text-blue-400" />
+                )}
+              </button>
+
+              {/* Dropdown Content */}
+              {isDropdownOpen && (
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Reduce Toxicity */}
+                  <div className="flex flex-col items-center bg-gray-800 p-6 rounded-lg shadow-md hover:bg-gray-700 transition">
+                    <h3 className="text-lg font-semibold mb-3">Reduce Toxicity</h3>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-block w-5 h-5 rounded-full ${
+                          punish_param === null
+                            ? "bg-gray-500"
+                            : punish_param
+                            ? "bg-green-400"
+                            : "bg-red-400"
+                        }`}
+                      ></span>
+                      <span className="font-semibold">
+                        {punish_param === null
+                          ? "Inactive"
+                          : punish_param
+                          ? "Active"
+                          : "Off"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Increase Rewards */}
+                  <div className="flex flex-col items-center bg-gray-800 p-6 rounded-lg shadow-md hover:bg-gray-700 transition">
+                    <h3 className="text-lg font-semibold mb-3">Increase Rewards</h3>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-block w-5 h-5 rounded-full ${
+                          increase_rewards === null
+                            ? "bg-gray-500"
+                            : increase_rewards
+                            ? "bg-green-400"
+                            : "bg-red-400"
+                        }`}
+                      ></span>
+                      <span className="font-semibold">
+                        {increase_rewards === null
+                          ? "Inactive"
+                          : increase_rewards
+                          ? "Active"
+                          : "Off"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Latency Threshold */}
+                  <div className="flex flex-col items-center bg-gray-800 p-6 rounded-lg shadow-md hover:bg-gray-700 transition">
+                    <h3 className="text-lg font-semibold mb-3">Latency Threshold</h3>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-block w-5 h-5 rounded-full ${
+                          latency_threshold === null
+                            ? "bg-gray-500"
+                            : latency_threshold === Threshold.Low
+                            ? "bg-green-400"
+                            : latency_threshold === Threshold.Medium
+                            ? "bg-yellow-400"
+                            : "bg-red-400"
+                        }`}
+                      ></span>
+                      <span className="font-semibold">
+                        {latency_threshold === null
+                          ? "Inactive"
+                          : latency_threshold === Threshold.Low
+                          ? "Low"
+                          : latency_threshold === Threshold.Medium
+                          ? "Medium"
+                          : "High"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* Player Simulation Controls */}
-        {/* <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800">Simulate Matchmaking</h2>
-          <p className="text-sm text-gray-600 mt-2">
-            Add players to the queue with adjustable skill ratings and see how PubNub matches them.
-          </p>
-          <div className="flex mt-4">
-            <button
-              onClick={addFakePlayer}
-              className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-600 border border-blue-600 hover:bg-blue-100"
-            >
-              Add Player
-            </button>
-          </div>
-        </section> */}
-
         {/* Skill Buckets Section */}
-        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800">Skill Buckets</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold text-center mb-8">Skill Buckets</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[...buckets].map(([range, users], index) => {
               // Sort users by Elo in descending order
               const sortedUsers = users.sort((a: User, b: User) => (b.custom?.elo || 0) - (a.custom?.elo || 0));
-
-              // Display the first 5 users by default, expand to show all
               const usersToDisplay = isExpanded ? sortedUsers : sortedUsers.slice(0, 5);
 
               return (
-                <div key={index} className="bg-gray-50 p-4 rounded-md border border-gray-200 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Elo Range: {range}</h3>
-                  <ul className="space-y-3">
+                <div
+                  key={index}
+                  className="bg-gray-800 p-6 rounded-lg shadow-md" // No hover effect here
+                >
+                  <h3 className="text-xl font-semibold text-blue-400 mb-4 text-center">
+                    Elo Range: {range}
+                  </h3>
+
+                  {/* User List */}
+                  <ul className="space-y-4">
                     {usersToDisplay.map((user, idx) => {
-                      // Retrieve the user’s status from the map
                       const userStatus = userStatusMap.get(user.id);
 
                       return (
-                        <li key={idx} className="flex items-center p-2 rounded-lg bg-white shadow-sm border border-gray-200">
+                        <li
+                          key={idx}
+                          className="flex items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition"
+                        >
                           {/* Profile Image */}
-                          <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-300">
+                          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-600">
                             <Image
                               src={user.profileUrl || "/assets/Avatar1.png"}
                               alt="Profile"
-                              width={40}
-                              height={40}
+                              width={48}
+                              height={48}
                               className="object-cover"
                             />
                           </div>
+
                           {/* Player Info */}
                           <div className="ml-4 flex-1">
-                            <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                            <p className="text-xs text-gray-600">
-                              Elo: <span className="text-blue-600">{user.custom?.elo}</span>
+                            <p className="font-semibold">{user.name}</p>
+                            <p className="text-sm text-gray-400">
+                              Elo: <span className="text-blue-400">{user.custom?.elo}</span>
                             </p>
                           </div>
+
                           {/* Status Icon */}
                           <div>
                             {userStatus === "Joining" && (
-                              <MdOutlineAccessTime className="text-yellow-500 text-xl" title="Joining" />
+                              <MdOutlineAccessTime className="text-yellow-400 text-2xl" title="Joining" />
                             )}
-                            {userStatus === "Matched" && <MdGroup className="text-blue-500 text-xl" title="Matched" />}
+                            {userStatus === "Matched" && (
+                              <MdGroup className="text-blue-400 text-2xl" title="Matched" />
+                            )}
                             {userStatus === "Confirmed" && (
-                              <MdCheckCircle className="text-green-500 text-xl" title="Confirmed" />
+                              <MdCheckCircle className="text-green-400 text-2xl" title="Confirmed" />
                             )}
-                            {userStatus === "InMatch" && <MdSportsEsports className="text-red-500 text-xl" title="In Match" />}
+                            {userStatus === "InMatch" && (
+                              <MdSportsEsports className="text-red-400 text-2xl" title="In Match" />
+                            )}
                             {(userStatus === undefined || userStatus === "Finished") && (
-                              <span className="text-gray-500 text-xs">Available</span>
+                              <span className="text-gray-400 text-xs">Available</span>
                             )}
                           </div>
                         </li>
                       );
                     })}
                   </ul>
-                  <div className="mt-4 text-center text-gray-500 text-xs">
+
+                  {/* Total Players */}
+                  <div className="mt-4 text-center text-gray-400">
                     {users.length} total players in this bucket
                   </div>
+
+                  {/* Expand/Collapse Button */}
                   {users.length > 5 && (
                     <button
                       onClick={() => toggleExpandAllBuckets()}
-                      className="mt-4 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-100 text-sm"
+                      className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition text-sm font-semibold"
                     >
                       {isExpanded ? "View Less" : "View More"}
                     </button>
@@ -267,19 +396,30 @@ export default function Home() {
         </section>
 
         {/* API Calls & Logs */}
-        <section className="bg-white p-6 rounded-lg border border-gray-300 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800">Log History</h2>
-          <ul className="mt-4 space-y-2 text-sm text-gray-600">
-            {logs?.slice(-6).reverse().map((log, index) => (
-              <li key={index}>{log}</li>
-            ))}
-          </ul>
+        <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold text-center mb-6">Log History</h2>
+          <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+            {logs && logs?.slice(-6).reverse().length > 0 ? (
+              <ul className="space-y-4">
+                {logs?.slice(-6).reverse().map((log, index) => (
+                  <li
+                    key={index}
+                    className="p-3 bg-gray-700 rounded-md text-sm hover:bg-gray-600 transition"
+                  >
+                    {log}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-400 text-center">No logs available.</p>
+            )}
+          </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-100 p-4 text-center border-t border-gray-300">
-        <p className="text-sm text-gray-600">
+      <footer className="bg-gray-800 text-gray-300 p-6 text-center border-t border-gray-700">
+        <p className="text-sm">
           © {new Date().getFullYear()} PubNub. All rights reserved.
         </p>
       </footer>

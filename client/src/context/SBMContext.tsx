@@ -3,7 +3,7 @@
 import PubNub from "pubnub";
 import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
-import { SBMContext, SkillRange } from "../types/contextTypes";
+import { SBMContext, SkillRange, Threshold } from "../types/contextTypes";
 
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<Chat>();
@@ -18,6 +18,9 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const userStatusMapRef = useRef<Map<string, string>>(new Map()); // Use useRef for userStatusMap
   const constraintsRef = useRef<Map<string, Number>>(new Map());
   const [constraints, setConstraints] = useState<Map<string, Number>>(new Map());
+  const [punish_param, setPunishParam] = useState<boolean | null>(null);
+  const [increase_rewards, setIncreaseRewards] = useState<boolean | null>(null);
+  const [latency_threshold, setLatencyThreshold] = useState<Threshold | null>(null);
 
   /*
   * Initializes the PubNub Chat instance.
@@ -538,6 +541,16 @@ const hydrateUsers = async (users: User[]) => {
             if(message.hasOwnProperty("elo_adjustment_weight")){
               updatedConstraints.set("ELO_ADJUSTMENT_WEIGHT", Number(message.elo_adjustment_weight));
             }
+            if(message.hasOwnProperty("punish_param")){
+              setPunishParam(message.punish_param == "Active" ? true : false);
+            }
+            if(message.hasOwnProperty("increase_rewards")){
+              setIncreaseRewards(message.increase_rewards == "Active" ? true : false);
+            }
+            if(message.hasOwnProperty("latency_theshold")){
+
+            }
+
 
             setConstraints(updatedConstraints);
           } else {
@@ -603,7 +616,10 @@ const hydrateUsers = async (users: User[]) => {
         logs,
         statsUser,
         allUsers,
-        constraints
+        constraints,
+        punish_param,
+        increase_rewards,
+        latency_threshold
       }}
     >
     {children}

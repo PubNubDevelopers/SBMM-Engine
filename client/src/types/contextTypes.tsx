@@ -1,6 +1,12 @@
 import { Chat, User } from "@pubnub/chat";
 import React from "react";
 
+export enum Threshold {
+  Low,
+  Medium,
+  High
+}
+
 export interface SBMType {
   chat: Chat | undefined;
   matchMakingUsers: User[],
@@ -10,7 +16,10 @@ export interface SBMType {
   logs: string[],
   statsUser: User | undefined,
   allUsers: User[],
-  constraints: Map<string, Number>
+  constraints: Map<string, Number>,
+  punish_param: boolean | null,
+  increase_rewards: boolean | null,
+  latency_threshold: Threshold | null
 }
 
 export const SBMContext = React.createContext<SBMType | null>(null);
