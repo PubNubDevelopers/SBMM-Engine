@@ -547,8 +547,19 @@ const hydrateUsers = async (users: User[]) => {
             if(message.hasOwnProperty("increase_rewards")){
               setIncreaseRewards(message.increase_rewards == "Active" ? true : false);
             }
-            if(message.hasOwnProperty("latency_theshold")){
-
+            if(message.hasOwnProperty("latency_threshold")){
+              if(message.latency_threshold == "Low"){
+                setLatencyThreshold(Threshold.Low);
+              }
+              else if(message.latency_threshold == "Medium"){
+                setLatencyThreshold(Threshold.Medium);
+              }
+              else if(message.latency_threshold == "High"){
+                setLatencyThreshold(Threshold.High);
+              }
+              else{
+                setLatencyThreshold(null);
+              }
             }
 
 
