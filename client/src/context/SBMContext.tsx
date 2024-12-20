@@ -4,7 +4,6 @@ import PubNub from "pubnub";
 import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { SBMContext, SkillRange, Threshold } from "../types/contextTypes";
-import { actionCompleted } from "pubnub-demo-integration"
 
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<Chat>();
