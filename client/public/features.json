@@ -1,0 +1,5 @@
+{
+  "features": [
+    "Launch the Skill-Based Matchmaking (SBMM) demo dashboard to observe and manage the matchmaking process in real-time. The dashboard visualizes players being queued and matched based on their skill levels (ELO) and latency data. Simulate players joining from different regions and skill tiers. Watch as the system dynamically calculates cost-optimal matches, ensuring balanced and efficient pairings."
+  ]
+}

@@ -17,6 +17,7 @@
     "cli-progress": "^3.12.0",
     "dotenv": "^16.4.5",
     "munkres-algorithm": "^1.0.2",
+    "pubnub-demo-integration": "^1.0.1",
     "recharts": "^2.13.1",
     "unique-username-generator": "^1.4.0",
     "uuid": "^10.0.0"
