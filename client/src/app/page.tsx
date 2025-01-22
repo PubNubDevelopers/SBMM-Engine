@@ -7,6 +7,7 @@ import { SBMContext } from "@/context/SBMContext";
 import { SkillRange, Threshold } from "@/types/contextTypes";
 import { User } from "@pubnub/chat";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import Link from "next/link";
 
 export default function Home() {
   const context = useContext(SBMContext);
@@ -423,6 +424,22 @@ export default function Home() {
           © {new Date().getFullYear()} PubNub. All rights reserved.
         </p>
       </footer>
+
+      <Link href="/avatar">
+        <button
+          style={{
+            background: "#4CAF50",
+            color: "white",
+            padding: "10px 15px",
+            borderRadius: "5px",
+            border: "none",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          Go to Avatar
+        </button>
+      </Link>
     </div>
   );
 }
