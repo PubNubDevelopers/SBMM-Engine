@@ -1,4 +1,4 @@
-import { Chat, Membership, User } from "@pubnub/chat";
+import { Chat, User } from "@pubnub/chat";
 import dotenv from "dotenv";
 import { getPubNubChatInstance } from "../utils/pubnub"; // Custom utility
 import { generateUsername } from "unique-username-generator";
@@ -8,7 +8,6 @@ dotenv.config(); // Load environment variables
 
 let chat: Chat;
 const userStatusMap = new Map<string, string>();
-let users: User[] = [];
 const cooldownMap = new Map(); // Tracks users' cooldown periods
 
 let userTracker: string[] = [];
@@ -200,6 +199,57 @@ async function initializeUsers() {
 }
 
 /**
+ * Randomize URL parameter
+ */
+function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function getRandomColor(): string {
+  const colors = ["#f5c6a5", "#e3ac86", "#c68642", "#8d5524", "#ffdbac", "#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff", "#808080", "#8b4513", "#A67B5B", "#E6BEA5", "#C0C0C0", "#f4a460", "#800080"];
+  return getRandomElement(colors);
+}
+
+export function generateRandomAvatarURL(): string {
+  const baseUrl = "http://localhost:5173/?avatar=true";
+
+  const params: Record<string, string> = {
+    Head: getRandomElement(["1", "2", "3", "4"]),
+    HeadColor: getRandomColor(),
+    Eyes: getRandomElement(["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009", "0010", "0011"]),
+    Bottom: getRandomElement(["00000000001", "00000000002", "00000000003"]),
+    BottomColor: getRandomColor(),
+    Top: getRandomElement(["0000000001", "0000000002", "0000000003"]),
+    TopColor: getRandomColor(),
+  };
+
+  // Optional parameters with a 50% chance of inclusion
+  const optionalAttributes: Record<string, string[]> = {
+    Hair: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"],
+    Face: ["001", "002", "003", "004", "005", "006", "007"],
+    Eyebrows: ["00001", "00002", "00003", "00004", "00005", "00006", "00007", "00008", "00009", "00010"],
+    Nose: ["000001", "000002", "000003", "000004"],
+    "Facial Hair": ["0000001", "0000002", "0000003", "0000004", "0000005", "0000006", "0000007"],
+    Glasses: ["00000001", "00000002", "00000003", "00000004"],
+    Hat: ["000000001", "000000002", "000000003", "000000004", "000000005", "000000006", "000000007"],
+    Shoes: ["000000000001", "000000000002", "000000000003"],
+  };
+
+  Object.entries(optionalAttributes).forEach(([key, values]) => {
+    if (Math.random() < 0.5) { // 50% chance to include the attribute
+      params[key] = getRandomElement(values);
+      params[`${key}Color`] = getRandomColor();
+    }
+  });
+
+  const queryString = Object.entries(params)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+
+  return `${baseUrl}&${queryString}`;
+}
+
+/**
  * Cleans user data and ensures all fields are present.
  */
 async function cleanUserData(users: User[]): Promise<User[]> {
@@ -241,10 +291,10 @@ async function cleanUserData(users: User[]): Promise<User[]> {
         needsUpdate = true;
       }
 
-      if (!user.profileUrl) {
-        updatedData.profileUrl = `/assets/Avatar${Math.floor(Math.random() * 6) + 1}.png`;
+      // if (!user.profileUrl) {
+        updatedData.profileUrl = generateRandomAvatarURL();
         needsUpdate = true;
-      }
+      // }
 
       // Simulated Matchmaking-Related Fields
       const matchesPlayed = user.custom?.matchesPlayed ?? Math.floor(Math.random() * 200);

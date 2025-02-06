@@ -8,6 +8,7 @@ import { SkillRange, Threshold } from "@/types/contextTypes";
 import { User } from "@pubnub/chat";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 import Link from "next/link";
+import FullScreenIframe from "../../components/full-screen-iframe";
 
 export default function Home() {
   const context = useContext(SBMContext);
@@ -87,8 +88,9 @@ export default function Home() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Players in Queue */}
-            <div className="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-md">
-              <h3 className="text-2xl font-semibold mb-6">Players in Queue</h3>
+            <div className="lg:col-span-2 bg-gray-900 bg-opacity-80 backdrop-blur-md p-6 rounded-xl shadow-lg border border-gray-700">
+              <h3 className="text-2xl font-semibold mb-6 text-white">Players in Queue</h3>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[...userStatusMap]
                   .filter(([id, status]) => status === "Joining")
@@ -100,22 +102,18 @@ export default function Home() {
                     return (
                       <div
                         key={id}
-                        className="flex items-center bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition"
+                        className="flex items-center bg-gray-800 bg-opacity-90 p-4 rounded-xl hover:bg-opacity-100 transition duration-300 border border-gray-700 shadow-md"
                       >
                         {/* Profile Image */}
-                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-500">
-                          <Image
+                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-500 shadow-md">
+                          <FullScreenIframe
                             src={user.profileUrl || "/assets/Avatar1.png"}
-                            alt="Profile"
-                            width={48}
-                            height={48}
-                            className="object-cover"
                           />
                         </div>
 
                         {/* Player Info */}
                         <div className="ml-4 flex-1">
-                          <p className="font-semibold">{user.name}</p>
+                          <p className="font-semibold text-white text-lg">{user.name}</p>
                           <p className="text-sm text-gray-400">
                             Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
                             <span className="text-gray-300">{user.custom.server}</span>
@@ -125,10 +123,10 @@ export default function Home() {
                         {/* Status Icon */}
                         <div>
                           {status === "In Queue" && (
-                            <MdOutlineAccessTime className="text-yellow-400 text-2xl" title="In Queue" />
+                            <MdOutlineAccessTime className="text-yellow-400 text-2xl animate-pulse" title="In Queue" />
                           )}
                           {status === "In Match" && (
-                            <MdSportsEsports className="text-green-400 text-2xl" title="In Match" />
+                            <MdSportsEsports className="text-green-400 text-2xl animate-bounce" title="In Match" />
                           )}
                         </div>
                       </div>
@@ -160,23 +158,23 @@ export default function Home() {
 
               {/* Recently Matched Players */}
               <div className="mt-8">
-                <h4 className="text-lg font-semibold mb-4">Recently Matched Players</h4>
-                <ul className="space-y-3">
+                <h4 className="text-lg font-semibold mb-4 text-white">Recently Matched Players</h4>
+                <ul className="space-y-4">
                   {recentMatchedUsers?.map((user: User) => (
-                    <li key={user.id} className="flex items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition">
-                      {/* Profile Image */}
-                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-500">
-                        <Image
+                    <li
+                      key={user.id}
+                      className="flex items-center bg-gray-900 bg-opacity-80 backdrop-blur-md p-4 rounded-xl border border-gray-600 hover:bg-opacity-100 transition duration-300"
+                    >
+                      {/* Profile Image with FullScreenIframe */}
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-400 shadow-lg">
+                        <FullScreenIframe
                           src={user.profileUrl || "/assets/Avatar1.png"}
-                          alt="Profile"
-                          width={40}
-                          height={40}
-                          className="object-cover"
                         />
                       </div>
+
                       {/* Player Info */}
-                      <div className="ml-4">
-                        <p className="font-semibold">{user.name}</p>
+                      <div className="ml-5">
+                        <p className="font-semibold text-lg text-white">{user.name}</p>
                         <p className="text-sm text-gray-400">
                           Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
                           <span className="text-gray-300">{user.custom.server}</span>
@@ -336,13 +334,13 @@ export default function Home() {
                         >
                           {/* Profile Image */}
                           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-600">
-                            <Image
+                            {/* <Image
                               src={user.profileUrl || "/assets/Avatar1.png"}
                               alt="Profile"
                               width={48}
                               height={48}
                               className="object-cover"
-                            />
+                            /> */}
                           </div>
 
                           {/* Player Info */}

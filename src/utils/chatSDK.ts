@@ -1,8 +1,7 @@
-import PubNub from 'pubnub';
+import PubNub, { Payload } from 'pubnub';
 import { Channel, Chat, Membership, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "./pubnub";
 import { retryOnFailure, isTransientError } from "./error";
-import { Payload } from 'pubnub/lib/types/core/types/api';
 
 const serverID = "server";
 

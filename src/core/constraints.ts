@@ -1,5 +1,4 @@
 import PubNub from "pubnub";
-import { Message } from "pubnub/lib/types/core/types/api/subscription";
 
 // Default values for matchmaking constraints
 let constraints = {

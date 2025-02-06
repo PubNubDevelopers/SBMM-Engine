@@ -6,13 +6,11 @@ interface FullScreenIframeProps {
 
 const FullScreenIframe: React.FC<FullScreenIframeProps> = ({ src }) => {
   return (
-    <div style={{ margin: 0, padding: 0, width: "100vw", height: "100vh" }}>
+    <div style={{ margin: 0, padding: 0, width: "100%", height: "100%" }}>
       <iframe
         src={src}
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
+          display: "block",
           width: "100%",
           height: "100%",
           border: "none",
