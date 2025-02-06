@@ -50,7 +50,7 @@ const MatchResults: React.FC = () => {
           toxicity: user.custom?.toxicity || "Non-toxic",
           playStyle: user.custom?.playStyle || "Balanced",
           region: user.custom?.region || "North America",
-          avatarUrl: `http://localhost:5173/?avatar=true&Name=${user.name || "Unknown Player"}`,
+          avatarUrl: `https://pubnub-character-configurator.netlify.app/?avatar=true&Name=${user.name || "Unknown Player"}`,
         };
 
         setUserProfile(profile);
@@ -76,7 +76,7 @@ const MatchResults: React.FC = () => {
                 toxicity: fetchedUser.custom?.toxicity || "Non-toxic",
                 playStyle: fetchedUser.custom?.playStyle || "Balanced",
                 region: fetchedUser.custom?.region || "North America",
-                avatarUrl: fetchedUser.custom?.profileURL || "http://localhost:5173/?avatar=true&Head=3&hairColor=%23FFD700&headColor=%23FFD700&hatColor=%23FFD700&Hair=01&Hat=000000002",
+                avatarUrl: fetchedUser.custom?.profileURL || "https://pubnub-character-configurator.netlify.app/?avatar=true&Head=3&hairColor=%23FFD700&headColor=%23FFD700&hatColor=%23FFD700&Hair=01&Hat=000000002",
               });
             }
           }
