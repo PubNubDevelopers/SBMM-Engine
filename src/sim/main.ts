@@ -211,7 +211,7 @@ function getRandomColor(): string {
 }
 
 export function generateRandomAvatarURL(): string {
-  const baseUrl = "http://localhost:5173/?avatar=true";
+  const baseUrl = "https://pubnub-character-configurator.netlify.app/?avatar=true";
 
   const params: Record<string, string> = {
     Head: getRandomElement(["1", "2", "3", "4"]),
@@ -291,10 +291,8 @@ async function cleanUserData(users: User[]): Promise<User[]> {
         needsUpdate = true;
       }
 
-      // if (!user.profileUrl) {
-        updatedData.profileUrl = generateRandomAvatarURL();
-        needsUpdate = true;
-      // }
+      updatedData.profileUrl = generateRandomAvatarURL();
+      needsUpdate = true;
 
       // Simulated Matchmaking-Related Fields
       const matchesPlayed = user.custom?.matchesPlayed ?? Math.floor(Math.random() * 200);
