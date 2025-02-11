@@ -19,7 +19,6 @@ const cleanUser = (user: User) => ({
 
 export async function handleMatchmakingRequest(req: any, res: any) {
   try {
-    console.log(JSON.stringify(req.body));
     const userID = req.body.userId;
     let chat: Chat;
 

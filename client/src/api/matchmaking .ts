@@ -1,7 +1,7 @@
 import axios from "axios";
 import { User } from "@pubnub/chat"; // Import the PubNub User type
 
-const API_BASE_URL = "http://34.219.145.240:3001"; // Backend URL
+const API_BASE_URL = "http://34.219.145.240:3000"; // Backend URL
 
 export async function sendMatchmakingRequest(
   uuid: string
