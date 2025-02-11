@@ -28,13 +28,6 @@ export default function Home() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Track expanded state for all skill buckets together
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const toggleExpandAllBuckets = () => {
-    setIsExpanded((prev) => !prev);
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-900 text-white">
       {/* Hero Section */}
@@ -63,20 +56,6 @@ export default function Home() {
             Deliver real-time matchmaking, driven by real-time decisioning.
           </p>
           <div className="h-4"></div>
-          {/* <div className="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button
-              onClick={() => window.open("https://www.pubnub.com/", "_blank")}
-              className="w-full sm:w-auto px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition drop-shadow-md"
-            >
-              Get Started Now
-            </button>
-            <button
-              onClick={() => window.open("https://www.pubnub.com/docs", "_blank")}
-              className="w-full sm:w-auto px-6 py-3 bg-transparent border border-white text-white hover:border-white hover:text-white rounded-lg font-semibold transition drop-shadow-md"
-            >
-              Explore Documentation
-            </button>
-          </div> */}
         </div>
       </header>
 

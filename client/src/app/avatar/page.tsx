@@ -110,38 +110,46 @@ const AvatarPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-900 text-white">
-      {/* Left Panel */}
-      <div className="w-1/3 p-6 bg-gray-800 flex flex-col space-y-6">
-        <h2 className="text-2xl font-bold">Player Traits</h2>
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-900 text-white">
+      {/* Left Panel - Player Traits */}
+      <div className="w-full md:w-1/3 p-6 bg-gradient-to-br from-gray-800/70 to-gray-900/80 backdrop-blur-md rounded-xl shadow-lg flex flex-col space-y-6">
+        <h2 className="text-3xl font-bold text-white">Player Traits</h2>
 
+        {/* Toxicity Level */}
         <div>
-          <label className="block text-sm font-medium mb-2">Toxicity Level</label>
-          <select value={toxicity} onChange={(e) => setToxicity(e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg text-gray-300">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Toxicity Level</label>
+          <select value={toxicity} onChange={(e) => setToxicity(e.target.value)}
+            className="w-full p-3 bg-gray-700/60 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition">
             <option value="Low">Low</option>
             <option value="Medium">Medium</option>
             <option value="High">High</option>
           </select>
         </div>
 
+        {/* Play Style */}
         <div>
-          <label className="block text-sm font-medium mb-2">Play Style</label>
-          <select value={playStyle} onChange={(e) => setPlayStyle(e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg text-gray-300">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Play Style</label>
+          <select value={playStyle} onChange={(e) => setPlayStyle(e.target.value)}
+            className="w-full p-3 bg-gray-700/60 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition">
             <option value="Balanced">Balanced</option>
             <option value="Passive">Passive</option>
             <option value="Aggressive">Aggressive</option>
           </select>
         </div>
 
+        {/* ELO Slider */}
         <div>
-          <label className="block text-sm font-medium mb-2">ELO (Skill Level)</label>
-          <input type="range" min="0" max="2000" value={elo} onChange={(e) => setElo(Number(e.target.value))} className="w-full" />
-          <p className="mt-2 text-gray-300">Selected: {elo}</p>
+          <label className="block text-sm font-medium text-gray-300 mb-2">ELO (Skill Level)</label>
+          <input type="range" min="0" max="2000" value={elo} onChange={(e) => setElo(Number(e.target.value))}
+            className="w-full accent-blue-500 transition-all" />
+          <p className="mt-2 text-gray-300 text-sm">Selected: <span className="text-blue-400 font-semibold">{elo}</span></p>
         </div>
 
+        {/* Region */}
         <div>
-          <label className="block text-sm font-medium mb-2">Region</label>
-          <select value={region} onChange={(e) => setRegion(e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg text-gray-300">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Region</label>
+          <select value={region} onChange={(e) => setRegion(e.target.value)}
+            className="w-full p-3 bg-gray-700/60 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition">
             <option value="NA">North America</option>
             <option value="EU">Europe</option>
             <option value="ASIA">Asia</option>
@@ -149,37 +157,43 @@ const AvatarPage: React.FC = () => {
           </select>
         </div>
 
+        {/* Preferred Game Mode */}
         <div>
-          <label className="block text-sm font-medium mb-2">Preferred Game Mode</label>
-          <select value={preferredMode} onChange={(e) => setPreferredMode(e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg text-gray-300">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Game Mode</label>
+          <select value={preferredMode} onChange={(e) => setPreferredMode(e.target.value)}
+            className="w-full p-3 bg-gray-700/60 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition">
             <option value="Casual">Casual</option>
             <option value="Competitive">Competitive</option>
           </select>
         </div>
 
-        {/* Matchmaking Button */}
-        <div className="mt-4">
-          <button
-            onClick={handleMatchmaking}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
-            disabled={loading}
-          >
+        {/* Start Matchmaking Button */}
+        <div className="mt-6">
+          <button onClick={handleMatchmaking}
+            className={`w-full py-3 text-white text-lg font-semibold rounded-lg transition ${
+              loading ? "bg-gray-600 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-md hover:shadow-lg"
+            }`}
+            disabled={loading}>
             {loading ? "Searching..." : "Start Matchmaking"}
           </button>
         </div>
 
-        {/* Loading Spinner */}
+        {/* Loading Animation */}
         {loading && (
           <div className="mt-4 text-center">
             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-2">Finding the best match...</p>
+            <p className="mt-2 text-gray-400 text-sm">Finding the best match...</p>
           </div>
         )}
       </div>
 
-      {/* Right Panel with Iframe */}
-      <div className="flex-1">
-        {userUUID && <FullScreenIframe src={`https://pubnub-character-configurator.netlify.app/?uuid=${userUUID}`} />}
+      {/* Right Panel - Avatar Customization */}
+      <div className="flex-1 w-full md:w-2/3 mt-6 md:mt-0">
+        {userUUID && (
+          <div className="h-[500px] md:h-full">
+            <FullScreenIframe src={`https://pubnub-character-configurator.netlify.app/?uuid=${userUUID}`} />
+          </div>
+        )}
       </div>
     </div>
   );

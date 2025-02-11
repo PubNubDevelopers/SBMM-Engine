@@ -78,7 +78,7 @@ const MatchResults: React.FC = () => {
       {/* Header */}
       <div className="flex items-center space-x-4">
         {/* Back Button with Icon */}
-        <Link href="/" className="group">
+        <Link href="/avatar" className="group">
           <button className="w-12 h-12 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-full transition">
             ⬅
           </button>
