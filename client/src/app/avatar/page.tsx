@@ -4,20 +4,29 @@ import React, { useContext, useEffect, useState } from "react";
 import FullScreenIframe from "../../../components/full-screen-iframe";
 import { useRouter } from "next/navigation";
 import { SBMContext } from "@/context/SBMContext";
-import { Channel, Message } from "@pubnub/chat";
+import { sendMatchmakingRequest } from "@/api/matchmaking ";
+import { User } from "@pubnub/chat";
 
 const AvatarPage: React.FC = () => {
-  const [elo, setElo] = useState(1000);
-  const [toxicity, setToxicity] = useState("Non-toxic");
-  const [playStyle, setPlayStyle] = useState("Balanced");
-  const [region, setRegion] = useState("North America");
-  const [preferredMode, setPreferredMode] = useState("Casual");
+
+  // State
   const [userUUID, setUserUUID] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
   const context = useContext(SBMContext);
   const { chat } = context || {};
+
+  // Custom Data
+  const [elo, setElo] = useState(1000);
+  const [toxicity, setToxicity] = useState("Medium");
+  const [playStyle, setPlayStyle] = useState("Balanced");
+  const [region, setRegion] = useState("NA");
+  const [preferredMode, setPreferredMode] = useState("Casual");
+
+  // User Data
+  const [name, setName] = useState("Temp");
+  const [email, setEmail] = useState("example@example.com");
+
 
   useEffect(() => {
     let uuid = localStorage.getItem("userUUID");
@@ -28,51 +37,75 @@ const AvatarPage: React.FC = () => {
     setUserUUID(uuid);
   }, []);
 
-  const handleMatchmaking = async () => {
-    if (!chat) return;
+  const updateUser = async (userId: string): Promise<User | null> => {
+    if(chat){
+      return await chat.updateUser(userId, {
+        custom: {
+          elo,
+          toxicityLevel: toxicity,
+          server: region,
+          gameModePreference: preferredMode,
+          inMatch: false,
+          inPreLobby: false,
+          latency: 25,
+          matchesPlayed: 0,
+          platform: "PC",
+          playFrequency: "Medium",
+          playStyle: playStyle,
+          teamPreference: "Solo",
+          totalMatches: 0,
+          punished: false,
+          searching: false,
+          voiceChatEnabled: false
+        },
+      })
+    }
+    return null;
+  }
 
-    setLoading(true);
-    const channelName = "create_player";
+  const createOrUpdateUser = async (userId: string) => {
+    if(chat){
+      let user: User | null = await chat.getUser(userId);
 
-    try {
-      let channel: Channel | null = await chat.getChannel(channelName);
-
-      if (channel) {
-        // Subscribe to the channel to receive matchmaking responses
-        channel.join(async (message: Message) => {
-          try {
-            const data = JSON.parse(message.content.text);
-            if (data.type == "MatchmakingResponse") {
-
-              // Store players in localStorage
-              localStorage.setItem("matchedPlayers", JSON.stringify(data.players));
-
-              // Redirect to results page with player data
-              router.push(`/results`);
-
-              // Unsubscribe and cleanup
-              await channel.leave();
-              setLoading(false);
-            }
-          } catch (err) {
-            console.error("Error processing response:", err);
-          }
+      if(user){
+        user = await updateUser(userId);
+      }
+      else{
+        user = await chat.createUser(userId, {
+          name: name,
+          email: email
         });
 
-        // Send matchmaking request
-        await channel.sendText(JSON.stringify({
-          type: "MatchmakingRequest",
-          userUUID,
-          elo,
-          toxicity,
-          playStyle,
-          region,
-          preferredMode,
-        }));
+        user = await updateUser(userId);
       }
-    } catch (e) {
-      console.error("Error in matchmaking process:", e);
-      setLoading(false);
+    }
+    else{
+      console.log("Chat is not defined while creating user")
+    }
+  }
+
+  const handleMatchmaking = async () => {
+    if (!loading && chat) {
+      setLoading(true);
+
+      await createOrUpdateUser(userUUID);
+
+      try {
+
+        // Call the matchmaking API with user preferences
+        const matches = await sendMatchmakingRequest(userUUID);
+
+        // Pass matched players and user UUID as query parameters
+        const encodedMatches = encodeURIComponent(JSON.stringify(matches.map((p) => p.id)));
+        const encodedUserUUID = encodeURIComponent(userUUID);
+
+        // Redirect to results page with userUUID and matched players
+        router.push(`/results?userUUID=${encodedUserUUID}&matches=${encodedMatches}`);
+      } catch (error) {
+        console.error("Error in matchmaking process:", error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -85,8 +118,9 @@ const AvatarPage: React.FC = () => {
         <div>
           <label className="block text-sm font-medium mb-2">Toxicity Level</label>
           <select value={toxicity} onChange={(e) => setToxicity(e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg text-gray-300">
-            <option value="Non-toxic">Non-toxic</option>
-            <option value="Toxic">Toxic</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
           </select>
         </div>
 
@@ -108,10 +142,10 @@ const AvatarPage: React.FC = () => {
         <div>
           <label className="block text-sm font-medium mb-2">Region</label>
           <select value={region} onChange={(e) => setRegion(e.target.value)} className="w-full p-2 bg-gray-700 rounded-lg text-gray-300">
-            <option value="North America">North America</option>
-            <option value="Europe">Europe</option>
-            <option value="Asia">Asia</option>
-            <option value="South America">South America</option>
+            <option value="NA">North America</option>
+            <option value="EU">Europe</option>
+            <option value="ASIA">Asia</option>
+            <option value="SA">South America</option>
           </select>
         </div>
 

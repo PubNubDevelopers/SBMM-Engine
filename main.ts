@@ -1,12 +1,15 @@
 // main.ts
 import { startListener } from './src/core/listener';
 import { simulateMatchmaking } from './src/sim/main';
-import { simulatePlayer } from './src/sim/player';
+import app, { PORT } from "./src/api/server";
 
 const main = async () => {
   startListener();
   simulateMatchmaking();
-  simulatePlayer();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 }
 
 main();

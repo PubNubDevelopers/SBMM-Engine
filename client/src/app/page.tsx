@@ -143,18 +143,27 @@ export default function Home() {
             </div>
 
             {/* Match Stats */}
-            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              <h3 className="text-2xl font-semibold mb-6">Match Stats</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Matches Formed:</span>
-                  <span className="text-blue-400 text-lg font-semibold">{statsUser?.custom.matchesFormed}</span>
+            <div className="bg-gray-900 bg-opacity-80 backdrop-blur-md p-6 rounded-xl shadow-lg border border-gray-700">
+              <h3 className="text-2xl font-semibold mb-6 text-white">Match Stats</h3>
+
+              <div className="space-y-6">
+                {/* Matches Formed */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-lg">Matches Formed:</span>
+                  <span className="text-blue-400 text-2xl font-semibold">
+                    {statsUser?.custom.matchesFormed}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Last Wait Time:</span>
-                  <span className="text-blue-400 text-lg font-semibold">{statsUser?.custom.avgWaitTime?.toFixed(2)}s</span>
+
+                {/* Last Wait Time */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-lg">Last Wait Time:</span>
+                  <span className="text-green-400 text-2xl font-semibold">
+                    {statsUser?.custom.avgWaitTime?.toFixed(2)}s
+                  </span>
                 </div>
               </div>
+
 
               {/* Recently Matched Players */}
               <div className="mt-8">
@@ -305,115 +314,65 @@ export default function Home() {
 
         {/* Skill Buckets Section */}
         <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
-          <h2 className="text-3xl font-bold text-center mb-8">Skill Buckets</h2>
+          <h2 className="text-3xl font-bold text-center mb-6">Skill Buckets</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
             {[...buckets].map(([range, users], index) => {
               // Sort users by Elo in descending order
               const sortedUsers = users.sort((a: User, b: User) => (b.custom?.elo || 0) - (a.custom?.elo || 0));
-              const usersToDisplay = isExpanded ? sortedUsers : sortedUsers.slice(0, 5);
+              const topUser = sortedUsers[0]; // Highest Elo player
+              const otherUsers = sortedUsers.slice(1, 5); // Other players displayed as small tiles
 
               return (
                 <div
                   key={index}
-                  className="bg-gray-800 p-6 rounded-lg shadow-md" // No hover effect here
+                  className="bg-gray-800 p-5 rounded-lg shadow-md min-w-[280px] flex-shrink-0 border border-gray-700"
                 >
-                  <h3 className="text-xl font-semibold text-blue-400 mb-4 text-center">
+                  {/* Elo Range Title with Dynamic Colors */}
+                  <h3
+                    className={`text-lg font-semibold text-center mb-4 ${
+                      index === 0 ? "text-green-400" : index === 1 ? "text-yellow-400" : "text-red-400"
+                    }`}
+                  >
                     Elo Range: {range}
                   </h3>
 
-                  {/* User List */}
-                  <ul className="space-y-4">
-                    {usersToDisplay.map((user, idx) => {
-                      const userStatus = userStatusMap.get(user.id);
+                  {/* 🏆 Top Player Tile (Larger, Rectangular) */}
+                  {topUser && (
+                    <div className="bg-gray-700 p-4 rounded-xl shadow-lg flex flex-col items-center">
+                      <div className="w-[200px] h-[120px] border-2 border-blue-400 shadow-md mb-2">
+                        <FullScreenIframe
+                          src={topUser.profileUrl || "/assets/Avatar1.png"}
+                        />
+                      </div>
+                      <p className="font-semibold text-lg">{topUser.name}</p>
+                      <p className="text-sm text-gray-400">
+                        Elo: <span className="text-blue-400">{topUser.custom?.elo}</span>
+                      </p>
+                    </div>
+                  )}
 
-                      return (
-                        <li
-                          key={idx}
-                          className="flex items-center bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition"
-                        >
-                          {/* Profile Image */}
-                          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-600">
-                            {/* <Image
-                              src={user.profileUrl || "/assets/Avatar1.png"}
-                              alt="Profile"
-                              width={48}
-                              height={48}
-                              className="object-cover"
-                            /> */}
-                          </div>
-
-                          {/* Player Info */}
-                          <div className="ml-4 flex-1">
-                            <p className="font-semibold">{user.name}</p>
-                            <p className="text-sm text-gray-400">
-                              Elo: <span className="text-blue-400">{user.custom?.elo}</span>
-                            </p>
-                          </div>
-
-                          {/* Status Icon */}
-                          <div>
-                            {userStatus === "Joining" && (
-                              <MdOutlineAccessTime className="text-yellow-400 text-2xl" title="Joining" />
-                            )}
-                            {userStatus === "Matched" && (
-                              <MdGroup className="text-blue-400 text-2xl" title="Matched" />
-                            )}
-                            {userStatus === "Confirmed" && (
-                              <MdCheckCircle className="text-green-400 text-2xl" title="Confirmed" />
-                            )}
-                            {userStatus === "InMatch" && (
-                              <MdSportsEsports className="text-red-400 text-2xl" title="In Match" />
-                            )}
-                            {(userStatus === undefined || userStatus === "Finished") && (
-                              <span className="text-gray-400 text-xs">Available</span>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  {/* Total Players */}
-                  <div className="mt-4 text-center text-gray-400">
-                    {users.length} total players in this bucket
+                  {/* 🏅 Average Player Tiles (Compact, No Iframe) */}
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    {otherUsers.map((user, idx) => (
+                      <div key={idx} className="bg-gray-700 p-2 rounded-md flex flex-col items-center text-center">
+                        <p className="text-sm font-semibold">{user.name}</p>
+                        <p className="text-xs text-gray-400">Elo: {user.custom?.elo}</p>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Expand/Collapse Button */}
-                  {users.length > 5 && (
-                    <button
-                      onClick={() => toggleExpandAllBuckets()}
-                      className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition text-sm font-semibold"
-                    >
-                      {isExpanded ? "View Less" : "View More"}
-                    </button>
-                  )}
+                  {/* Total Players */}
+                  <div className="mt-4 text-center text-gray-400 text-sm">
+                    {users.length} players in this bucket
+                  </div>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* API Calls & Logs */}
-        <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
-          <h2 className="text-3xl font-bold text-center mb-6">Log History</h2>
-          <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-            {logs && logs?.slice(-6).reverse().length > 0 ? (
-              <ul className="space-y-4">
-                {logs?.slice(-6).reverse().map((log, index) => (
-                  <li
-                    key={index}
-                    className="p-3 bg-gray-700 rounded-md text-sm hover:bg-gray-600 transition"
-                  >
-                    {log}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-400 text-center">No logs available.</p>
-            )}
-          </div>
-        </section>
+
       </main>
 
       {/* Footer */}
@@ -424,19 +383,12 @@ export default function Home() {
       </footer>
 
       <Link href="/avatar">
-        <button
-          style={{
-            background: "#4CAF50",
-            color: "white",
-            padding: "10px 15px",
-            borderRadius: "5px",
-            border: "none",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
+        <div
+          className="fixed bottom-6 right-6 w-16 h-16 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg border border-gray-700 transition transform hover:scale-110"
+          style={{ boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.3)" }}
         >
-          Go to Avatar
-        </button>
+          <MdGroup className="text-3xl" />
+        </div>
       </Link>
     </div>
   );

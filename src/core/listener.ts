@@ -86,7 +86,6 @@ async function processMatchmakingQueue(chat: Chat) {
     // Pass user details into the matchmaking logic
     processMatchMaking(userDetails, (unpaired: string[]) => {
       // Re-add unpaired users to the matchmaking queue
-      console.log("UNPAIRED USERIDs");
       for (const userId of unpaired) {
         console.log(userId);
         if (!matchmakingQueue.has(userId)) {

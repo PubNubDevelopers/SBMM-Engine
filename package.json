@@ -15,7 +15,9 @@
     "@pubnub/chat": "^0.8.2",
     "axios": "^1.7.7",
     "cli-progress": "^3.12.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "express": "^4.21.2",
     "munkres-algorithm": "^1.0.2",
     "recharts": "^2.13.1",
     "unique-username-generator": "^1.4.0",
@@ -23,6 +25,8 @@
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^18.0.0",
     "@types/recharts": "^1.8.29",

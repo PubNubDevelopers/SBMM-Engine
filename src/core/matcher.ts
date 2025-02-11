@@ -4,13 +4,9 @@ import { pairUsersBySkill } from "./sbm";
 import { getOrCreateChannel, notifyClient, sendIlluminateData, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { delay } from "../utils/general";
 import { retryOnFailure } from "../utils/error";
-import { getConstraints } from "./constraints";
 import { simulateGame } from "./game";
 
 const serverID = "server"
-type MatchmakingCallback = (player1: User, player2: User) => Promise<void> | void;
-
-let userIDs: string[] = [];
 
 /**
  * Process matchmaking logic

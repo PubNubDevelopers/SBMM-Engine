@@ -82,3 +82,55 @@ export function pairUsersBySkill(users: User[]): { pairs: [User, User][], unpair
 
   return { pairs, unpaired };
 }
+
+type ToxicityLevel = "high" | "medium" | "low";
+
+// Define a new type that extends PubNub's User object with compatibilityScore
+type UserWithScore = User & { compatibilityScore: number };
+
+// Toxicity Compatibility Scoring Table
+const toxicityScoreMap: Record<string, Record<string, number>> = {
+  low: { low: 20, medium: 10, high: 0 },
+  medium: { low: 10, medium: 20, high: 10 },
+  high: { low: 0, medium: 10, high: 20 },
+};
+
+export function calculateCompatibilityScore(
+  toxicityLevel: string,
+  playStyle: string,
+  elo: number,
+  region: string,
+  preferredGameMode: string,
+  playerPool: User[]
+): UserWithScore[] {
+  if (!playerPool.length) return [];
+
+  return playerPool
+    .map((otherUser) => {
+      if (!otherUser.custom) return undefined; // Skip users without `custom` fields
+
+      const otherElo = otherUser.custom.elo ?? 0;
+      const eloDiff = Math.abs(elo - otherElo);
+
+      const otherPlayStyle = otherUser.custom.playStyle ?? "Unknown";
+      const playStyleMatch = playStyle === otherPlayStyle ? 20 : 0;
+
+      const otherToxicity = otherUser.custom.toxicityLevel ?? "medium"; // Default to medium
+      const toxicityScore = toxicityScoreMap[toxicityLevel]?.[otherToxicity] ?? 0;
+
+      const otherGameMode = otherUser.custom.gameModePreference ?? "Default";
+      const gameModeMatch = preferredGameMode === otherGameMode ? 10 : 0;
+
+      // Compatibility Score Calculation
+      const score =
+        (1 / (1 + eloDiff)) * 50 + // Closer Elo gets higher score
+        playStyleMatch + // Playstyle match adds 20 points
+        toxicityScore + // Toxicity compatibility score
+        gameModeMatch; // Game mode match adds 10 points
+
+      return { ...otherUser, compatibilityScore: score }; // Add score while keeping the original PubNub User object
+    })
+    .filter((user): user is UserWithScore => user !== undefined) // Type-safe filtering
+    .sort((a, b) => b.compatibilityScore - a.compatibilityScore) // Sort by highest score
+    .slice(0, 5); // Return top 5 users
+}

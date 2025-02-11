@@ -6,7 +6,7 @@ interface FullScreenIframeProps {
 
 const FullScreenIframe: React.FC<FullScreenIframeProps> = ({ src }) => {
   return (
-    <div style={{ margin: 0, padding: 0, width: "100%", height: "100%" }}>
+    <div className="rounded-lg" style={{ margin: 0, padding: 0, width: "100%", height: "100%" }}>
       <iframe
         src={src}
         style={{
