@@ -158,7 +158,74 @@ To run the project locally, you’ll need:
   docker-compose up --build
   ```
 
-### Visualize Users using BizOps Workspace
+## Setting up PubNub Illuminate
+> PubNub’s latest product release, Illuminate, is a scalable decision-making tool that we have built to help game developers, product managers, and project managers build, iterate, and experiment within the PubNub platform. Designed to drive a better player experience and can be utilized for configuring a "personalized" SBMM algorithm.
+
+[Business Object](https://www.pubnub.com/docs/illuminate/business-objects/basics): A model of data you want to process/track. </br>
+[Decision](https://www.pubnub.com/docs/illuminate/decisions/basics): Apply conditions to your business objects and take actions when conditions are met. </br>
+[Dashboard](https://www.pubnub.com/docs/illuminate/dashboards/create-dashboards-and-charts#use-case): Visualize metric data and monitor actions in real-time.
+
+![PubNub Illuminate Dashboard](assets/pubnub.illuminate.png)
+
+1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/)
+
+2. On the side menu click the drop down **Illuminate** -> **Business Objects**
+
+3. Create a new Business Object by clicking **Create Business Object**
+
+4. Enter a **Name** and **Description** and select the keyset the Business Object will exsist under
+
+5. Make sure the Business Object is Deactivated and click on **Edit**. This is where you will map the data being sent through PubNub.
+
+6. For this demo I have mapped the following variables into Illuminate.
+
+![Illuminate Variables](assets/illuminate.data.fields.png)
+
+### Setting up a Illuminate Decision
+
+> After setting up a **Business Object** we are able to use this to create a **Decision** within Illuminate. The first step of creating a decision is deciding how, where, and to who an **Action** is going to fire. This next part will show you how I configured my decision for this demo.
+
+
+
+1. Navigate to the Decisions tab
+
+2. Click on Create Decision
+
+3. Fill out the fields Name and Description and click **+ Add action**
+
+4. Under the **Conditions** heading select the **Business Object** that was created
+
+5. You can base your action off of **event** or **an aggregation**
+
+6. Choose the metric that the decision will use and evaluate for its action/rule
+
+![PubNub Illuminate Configure Action](assets/illuminate.configure.action.png)
+
+7. You can create multiple types of actions. For this demo I utilized using the **Send Message** action
+
+8. If utilizing the **Send Message** action, enter the keyset you would like to use to fire this action
+
+9. Fill out the **channel** the action fires on and the **body** of the message that will be sent.
+
+10. You must embrace the message in quotes and you can optionally add variables (${variableThatChanges}).
+
+Example: **`"Welcome to ${levelName}, enter discount code ${discountCode} within the first 5 minutes to buy ${purchaseItem}."`**
+
+![PubNub Illuminate Send Message Action](assets/illuminate.send.message.png)
+
+### Setting up Illuminate Rules
+
+> Now that we have set up a **Action** we are able to configure a rule set for when this action is going to fire. We will also be able to decide what the value of the variable set will be and when based off of our metrics.
+
+1. Click on **Add Rules** or click on the decision and **Edit Rules** after creating your decision
+
+2. Here we can add our conditions for when the action is going to fire
+
+3. For example I used the following condition and set the variable that I configured in my action to the following values
+
+![PubNub Illuminate Rules](assets/illuminate.configure.rules.png)
+
+## Visualize Users using BizOps Workspace
 
 1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/).
 
@@ -197,8 +264,7 @@ To run the project locally, you’ll need:
 7. Click on view memberships to see who is active in that game lobby. If no one is active that means the game has ended
 
 ![Alt text](assets/BizOps.View.Memberships.png)
-
-
+s
 
 ## License
 
