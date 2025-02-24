@@ -2,7 +2,7 @@
 
 Application to show how the scalability of PubNub can be utilized for Skill-based-matchmaking (SBMM) and improve the matchmaking experience.
 
-## Why PubNub for your SBMM system
+## 🚀 Why PubNub for your Skill-Based-Matchmaking (SBMM) system
 
 Peer-to-peer matchmaking processing can be enhanced using PubNub in a variety of ways
 
@@ -16,7 +16,7 @@ Real-time: <30ms global delivery, regardless of concurrency. </br></br>
 Scale: We handle 3 Trillion real-time API calls every month. </br></br>
 Stability: 99.999& SLA provided for all players
 
-## Client Application Overview
+## 🎮 Client Application Overview
 
 This demo showcases how to run a Skill Based Matchmaking Algorithm in a production environment.
 
@@ -25,7 +25,7 @@ This demo showcases how to run a Skill Based Matchmaking Algorithm in a producti
 ![Alt text](assets/client.screenshot.png)
 ![Alt text](assets/client.avatar.png)
 
-## Architecture Overview
+## 🏗 Architecture Overview
 
 > This is architecture explains how the client communicates with the server componenet utilizing our [TypeScript Chat SDK](https://www.pubnub.com/docs/chat/chat-sdk/overview). This architecture is set up in a way where the individual user has to confirm the match they have joined before a game is actually created.
 
@@ -38,7 +38,7 @@ This demo showcases how to run a Skill Based Matchmaking Algorithm in a producti
 5. Server processes matchmaking request using matchmaking constraints and user details
 6. Server creates a PubNub "lobby" channel and sends it to the corresponding matched players
 
-## Folder Structure
+## 📂 Folder Structure
 
 <pre>
 /multiplayer-matchmaking
@@ -65,9 +65,9 @@ This demo showcases how to run a Skill Based Matchmaking Algorithm in a producti
 ├── .env                 # Environment variables for the main server
 </pre>
 
-## Getting Started
+## 🚀 Getting Started
 
-### Prerequisites
+### 🛠 Prerequisites
 
 To run the project locally, you’ll need:
 
@@ -75,7 +75,7 @@ To run the project locally, you’ll need:
 - **Docker** (for containerization)
 - **PubNub API Keys** (to handle real-time messaging and events)
 
-### Get Your PubNub Keys
+### 🔑 Get Your PubNub Keys
 
 1. You’ll first need to sign up for a [PubNub account](https://admin.pubnub.com/signup/). Once you sign up, you can get your unique PubNub keys from the [PubNub Developer Portal](https://admin.pubnub.com/).
 
@@ -97,7 +97,7 @@ To run the project locally, you’ll need:
 
 1. Copy the Publish and Subscribe keys and paste them into your app as specified in the next step.
 
-### Installation
+### 📥 Installation
 
 1. Clone the repository:
 
@@ -158,7 +158,7 @@ To run the project locally, you’ll need:
   docker-compose up --build
   ```
 
-## Setting up PubNub Illuminate
+## 📊 Setting up PubNub Illuminate for Matchmaking Optimization
 > PubNub’s latest product release, Illuminate, is a scalable decision-making tool that we have built to help game developers, product managers, and project managers build, iterate, and experiment within the PubNub platform. Designed to drive a better player experience and can be utilized for configuring a "personalized" SBMM algorithm.
 
 [Business Object](https://www.pubnub.com/docs/illuminate/business-objects/basics): A model of data you want to process/track. </br>
@@ -166,6 +166,8 @@ To run the project locally, you’ll need:
 [Dashboard](https://www.pubnub.com/docs/illuminate/dashboards/create-dashboards-and-charts#use-case): Visualize metric data and monitor actions in real-time.
 
 ![PubNub Illuminate Dashboard](assets/pubnub.illuminate.png)
+
+### 🏗 Configure Business Objects
 
 1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/)
 
@@ -181,11 +183,9 @@ To run the project locally, you’ll need:
 
 ![Illuminate Variables](assets/illuminate.data.fields.png)
 
-### Setting up a Illuminate Decision
+### 🏗 Setting up a Illuminate Decision
 
 > After setting up a **Business Object** we are able to use this to create a **Decision** within Illuminate. The first step of creating a decision is deciding how, where, and to who an **Action** is going to fire. This next part will show you how I configured my decision for this demo.
-
-
 
 1. Navigate to the Decisions tab
 
@@ -213,7 +213,7 @@ Example: **`"Welcome to ${levelName}, enter discount code ${discountCode} within
 
 ![PubNub Illuminate Send Message Action](assets/illuminate.send.message.png)
 
-### Setting up Illuminate Rules
+### 🏗 Setting up Illuminate Rules
 
 > Now that we have set up a **Action** we are able to configure a rule set for when this action is going to fire. We will also be able to decide what the value of the variable set will be and when based off of our metrics.
 
@@ -225,7 +225,7 @@ Example: **`"Welcome to ${levelName}, enter discount code ${discountCode} within
 
 ![PubNub Illuminate Rules](assets/illuminate.configure.rules.png)
 
-## Visualize Users using BizOps Workspace
+## 🔍 Monitor Users with BizOps Workspace
 
 1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/).
 
@@ -243,7 +243,7 @@ Example: **`"Welcome to ${levelName}, enter discount code ${discountCode} within
 
 ![Alt text](assets/BizOps.User.png)
 
-### Visualize Game Lobbies using BizOps Workspace
+### 🔍 Visualize Game Lobbies using BizOps Workspace
 
 1. Sign in to your [PubNub Dashboard](https://admin.pubnub.com/).
 
