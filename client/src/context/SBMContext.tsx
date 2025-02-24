@@ -4,6 +4,7 @@ import PubNub from "pubnub";
 import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { SBMContext, SkillRange, Threshold } from "../types/contextTypes";
+import { developerMessage } from "@/utils/general";
 
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<Chat>();
@@ -43,6 +44,9 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
       setChat(chat);
       setPubNub(pubnub);
+
+      developerMessage('This demo uses an example UI but your app would use its own UX, invoking the PubNub SDK --> You are NOT locked to a specific UI');
+      developerMessage('Your username and avatar URL are stored in PubNub App Context');
     }
     catch(e){
       console.error("Failed to initialize PubNub: ", e);

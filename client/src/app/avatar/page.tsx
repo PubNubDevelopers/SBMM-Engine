@@ -4,9 +4,10 @@ import React, { useContext, useEffect, useState } from "react";
 import FullScreenIframe from "../../../components/full-screen-iframe";
 import { useRouter } from "next/navigation";
 import { SBMContext } from "@/context/SBMContext";
-import { sendMatchmakingRequest } from "@/api/matchmaking ";
+import { sendMatchmakingRequest } from "@/api/matchmaking";
 import { User } from "@pubnub/chat";
 import Link from "next/link";
+import { developerMessage } from "@/utils/general";
 
 const AvatarPage: React.FC = () => {
 

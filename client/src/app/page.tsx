@@ -13,9 +13,9 @@ import FullScreenIframe from "../../components/full-screen-iframe";
 export default function Home() {
 
   useEffect(() => {
-    console.warn = () => {}; // Disable warnings
-    console.error = () => {}; // Disable errors
-    console.info = () => {}; // Disable info logs
+    console.warn = () => {};
+    console.error = () => {};
+    console.info = () => {};
 
     return () => {
       // Restore original console methods on unmount (optional)
