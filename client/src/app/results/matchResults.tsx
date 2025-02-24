@@ -91,7 +91,7 @@ const MatchResults: React.FC = () => {
 
       {/* Matched Players */}
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
-        {matchedPlayers.map((player, index) => {
+        {matchedPlayers.slice(0, 4).map((player, index) => {
           const compatibilityScore =
             0.4 * (1 - Math.abs((player.custom?.elo ?? 1000) - (userProfile.custom?.elo ?? 1000)) / 2000) +
             0.2 * (player.custom?.toxicityLevel === userProfile.custom?.toxicityLevel ? 1 : 0) +

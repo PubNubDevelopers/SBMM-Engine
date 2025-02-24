@@ -28,8 +28,6 @@ export async function simulatePlayer() {
                 players,
               }),
             );
-
-            console.log("Sent matchmaking response:", players);
           }
         } catch (err) {
           console.error("Error processing message:", err);
