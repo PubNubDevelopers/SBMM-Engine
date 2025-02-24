@@ -13,39 +13,13 @@ import FullScreenIframe from "../../components/full-screen-iframe";
 export default function Home() {
 
   useEffect(() => {
-    // Preserve the original console methods
-    const originalLog = console.log;
     console.warn = () => {}; // Disable warnings
     console.error = () => {}; // Disable errors
-
-    // List of blocked keywords (adjust as needed)
-    const blockedKeywords = ["WebSocket", "iframe", "ServiceWorker", "THREE.PropertyBinding"];
-
-    // Function to check if a log is external
-    const isExternalSource = () => {
-      try {
-        throw new Error();
-      } catch (e) {
-        const stackLines = (e as Error).stack?.split("\n") || [];
-        return stackLines.some((line) =>
-          line.includes("node_modules") ||
-          line.includes("<anonymous>") ||
-          line.includes("at (webpack)")
-        );
-      }
-    };
-
-    // Override console methods to block unwanted messages
-    console.log = (...args) => {
-      const message = JSON.stringify(args);
-      if (!isExternalSource() && !blockedKeywords.some((keyword) => message.includes(keyword))) {
-        originalLog(...args);
-      }
-    };
+    console.info = () => {}; // Disable info logs
 
     return () => {
       // Restore original console methods on unmount (optional)
-      console.warn = console.error = console.log;
+      console.warn = console.error = console.info = console.log;
     };
   }, []);
 

@@ -560,7 +560,6 @@ const hydrateUsers = async (users: User[]) => {
           }
         },
         status: (statusEvent) => {
-          console.log(statusEvent);
           if (statusEvent.category === "PNConnectedCategory") {
             console.log("Subscribed to SBMM-conditions channel");
           } else {
