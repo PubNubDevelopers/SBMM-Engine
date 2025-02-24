@@ -14,8 +14,12 @@ const cooldownMap = new Map(); // Tracks users' cooldown periods
 let userTracker: string[] = [];
 let channelTracker: string[] = [];
 
+let matchmakingTimeout: NodeJS.Timeout | null = null;
+
 export async function simulateMatchmaking() {
   try {
+    console.log("Initializing PubNub Chat Instance...");
+
     // Initialize PubNub Chat instance
     chat = await getPubNubChatInstance("server");
 
@@ -24,6 +28,18 @@ export async function simulateMatchmaking() {
 
     // Start organic matchmaking simulation
     await organicallySimulateMatchmaking();
+
+    console.log("Matchmaking simulation started...");
+
+    // Stop matchmaking after 2 hours, wait 30 seconds, and restart
+    matchmakingTimeout = setTimeout(async () => {
+      console.log("Matchmaking stopped. Restarting in 30 seconds...");
+
+      setTimeout(async () => {
+        console.log("Restarting matchmaking...");
+        await simulateMatchmaking(); // Restart function
+      }, 30000); // 30-second delay
+    }, 2 * 60 * 60 * 1000); // 2 hours
 
   } catch (error) {
     console.error("Error initializing server:", error);

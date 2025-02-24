@@ -71,8 +71,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       user.streamUpdates((user) => {
         setStatsUser(user);
       });
-
-      console.log(JSON.stringify(user.custom));
     }
   }
 
@@ -185,8 +183,6 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
       "eeb379d1-5224-46a5-9706-8b89eeb5e747"
     ]);
     if (users) {
-      console.log(users.map((user) => user.id));
-
       setAllUsers(users);
       await hydrateUsers(users);
       // Initialize userStatusMap with each user set to "Finished" using useRef
@@ -271,13 +267,10 @@ const hydrateUsers = async (users: User[]) => {
               statusSet = true; // Mark that a status has been set
             }
           }
-        } else {
-          console.warn(`Membership for channel ${channelName} has undefined timeToken.`);
         }
       }
     } catch (error) {
       console.error("Error checking membership details:", error);
-      console.log(JSON.stringify(user.custom));
     }
   };
 
@@ -564,8 +557,6 @@ const hydrateUsers = async (users: User[]) => {
 
 
             setConstraints(updatedConstraints);
-          } else {
-            console.warn("Invalid message format received on SBMM-conditions channel:", message);
           }
         },
         status: (statusEvent) => {

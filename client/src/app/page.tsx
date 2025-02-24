@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { MdOutlineAccessTime, MdCheckCircle, MdSportsEsports, MdGroup } from "react-icons/md";
 import Image from "next/image";
 import { SBMContext } from "@/context/SBMContext";
@@ -11,6 +11,45 @@ import Link from "next/link";
 import FullScreenIframe from "../../components/full-screen-iframe";
 
 export default function Home() {
+
+  useEffect(() => {
+    // Preserve the original console methods
+    const originalLog = console.log;
+    console.warn = () => {}; // Disable warnings
+    console.error = () => {}; // Disable errors
+
+    // List of blocked keywords (adjust as needed)
+    const blockedKeywords = ["WebSocket", "iframe", "ServiceWorker", "THREE.PropertyBinding"];
+
+    // Function to check if a log is external
+    const isExternalSource = () => {
+      try {
+        throw new Error();
+      } catch (e) {
+        const stackLines = (e as Error).stack?.split("\n") || [];
+        return stackLines.some((line) =>
+          line.includes("node_modules") ||
+          line.includes("<anonymous>") ||
+          line.includes("at (webpack)")
+        );
+      }
+    };
+
+    // Override console methods to block unwanted messages
+    console.log = (...args) => {
+      const message = JSON.stringify(args);
+      if (!isExternalSource() && !blockedKeywords.some((keyword) => message.includes(keyword))) {
+        originalLog(...args);
+      }
+    };
+
+    return () => {
+      // Restore original console methods on unmount (optional)
+      console.warn = console.error = console.log;
+    };
+  }, []);
+
+
   const context = useContext(SBMContext);
 
   const {
@@ -37,11 +76,13 @@ export default function Home() {
           <Image
             src="/assets/background.jpg"
             alt="Background"
-            layout="fill" // Makes the image fill the parent container
-            objectFit="cover" // Ensures the image covers the container
-            objectPosition="center 10%" // Offsets the image downwards
-            quality={100} // Optional: Image quality (0-100)
-            priority // Ensures the image loads quickly
+            fill // ✅ Correct replacement for layout="fill"
+            priority // ✅ Ensures the image loads quickly
+            quality={100} // ✅ Optional: Image quality (0-100)
+            style={{
+              objectFit: "cover", // ✅ Fix: Moved objectFit inside style
+              objectPosition: "center 10%", // ✅ Fix: Moved objectPosition inside style
+            }}
           />
           <div className="absolute inset-0 bg-black opacity-50"></div>
         </div>
@@ -70,53 +111,44 @@ export default function Home() {
             <div className="lg:col-span-2 bg-gray-900 bg-opacity-80 backdrop-blur-md p-6 rounded-xl shadow-lg border border-gray-700">
               <h3 className="text-2xl font-semibold mb-6 text-white">Players in Queue</h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[...userStatusMap]
-                  .filter(([id, status]) => status === "Joining")
-                  .slice(0, 6)
-                  .map(([id, status]) => {
-                    const user = allUsers.find((user) => user.id === id);
-                    if (!user) return null;
+              {([...userStatusMap].filter(([id, status]) => status === "Joining").length === 0) ? (
+                // Display message if no players are in queue
+                <p className="text-gray-400 text-center text-lg">No Players in Queue</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[...userStatusMap]
+                    .filter(([id, status]) => status === "Joining")
+                    .slice(0, 6)
+                    .map(([id, status]) => {
+                      const user = allUsers.find((user) => user.id === id);
+                      if (!user) return null;
 
-                    return (
-                      <div
-                        key={id}
-                        className="flex items-center bg-gray-800 bg-opacity-90 p-4 rounded-xl hover:bg-opacity-100 transition duration-300 border border-gray-700 shadow-md"
-                      >
-                        {/* Profile Image */}
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-500 shadow-md">
-                          <FullScreenIframe
-                            src={user.profileUrl || "/assets/Avatar1.png"}
-                          />
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center bg-gray-800 bg-opacity-90 p-4 rounded-xl hover:bg-opacity-100 transition duration-300 border border-gray-700 shadow-md"
+                        >
+                          {/* Player Info */}
+                          <div className="ml-4 flex-1">
+                            <p className="font-semibold text-white text-lg">{user.name}</p>
+                            <p className="text-sm text-gray-400">
+                              Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
+                              <span className="text-gray-300">{user.custom.server}</span>
+                            </p>
+                          </div>
+
+                          {/* Status Icon */}
+                          <div>
+                            {status === "In Queue" && (
+                              <MdOutlineAccessTime className="text-yellow-400 text-2xl animate-pulse" title="In Queue" />
+                            )}
+                            {status === "In Match" && (
+                              <MdSportsEsports className="text-green-400 text-2xl animate-bounce" title="In Match" />
+                            )}
+                          </div>
                         </div>
-
-                        {/* Player Info */}
-                        <div className="ml-4 flex-1">
-                          <p className="font-semibold text-white text-lg">{user.name}</p>
-                          <p className="text-sm text-gray-400">
-                            Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
-                            <span className="text-gray-300">{user.custom.server}</span>
-                          </p>
-                        </div>
-
-                        {/* Status Icon */}
-                        <div>
-                          {status === "In Queue" && (
-                            <MdOutlineAccessTime className="text-yellow-400 text-2xl animate-pulse" title="In Queue" />
-                          )}
-                          {status === "In Match" && (
-                            <MdSportsEsports className="text-green-400 text-2xl animate-bounce" title="In Match" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-
-              {/* View More Button */}
-              {([...userStatusMap].filter(([id, status]) => status === "Joining").length > 6) && (
-                <div className="mt-6 text-center text-gray-400">
-                  {([...userStatusMap].filter(([id, status]) => status === "Joining").length)} total players in queue
+                      );
+                    })}
                 </div>
               )}
             </div>
@@ -126,51 +158,60 @@ export default function Home() {
               <h3 className="text-2xl font-semibold mb-6 text-white">Match Stats</h3>
 
               <div className="space-y-6">
-                {/* Matches Formed */}
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-lg">Matches Formed:</span>
-                  <span className="text-blue-400 text-2xl font-semibold">
-                    {statsUser?.custom.matchesFormed}
-                  </span>
-                </div>
+                {(!statsUser || !statsUser.custom) ? (
+                  // Loading indicator while stats are being fetched
+                  <div className="flex justify-center items-center py-6">
+                    <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="ml-3 text-gray-400 text-lg">Loading stats...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Matches Formed */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-lg">Matches Formed:</span>
+                      <span className="text-blue-400 text-2xl font-semibold">
+                        {statsUser.custom.matchesFormed}
+                      </span>
+                    </div>
 
-                {/* Last Wait Time */}
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-lg">Last Wait Time:</span>
-                  <span className="text-green-400 text-2xl font-semibold">
-                    {statsUser?.custom.avgWaitTime?.toFixed(2)}s
-                  </span>
-                </div>
+                    {/* Last Wait Time */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-lg">Last Wait Time:</span>
+                      <span className="text-green-400 text-2xl font-semibold">
+                        {statsUser.custom.avgWaitTime?.toFixed(2)}s
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
 
               {/* Recently Matched Players */}
               <div className="mt-8">
                 <h4 className="text-lg font-semibold mb-4 text-white">Recently Matched Players</h4>
-                <ul className="space-y-4">
-                  {recentMatchedUsers?.map((user: User) => (
-                    <li
-                      key={user.id}
-                      className="flex items-center bg-gray-900 bg-opacity-80 backdrop-blur-md p-4 rounded-xl border border-gray-600 hover:bg-opacity-100 transition duration-300"
-                    >
-                      {/* Profile Image with FullScreenIframe */}
-                      <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-blue-400 shadow-lg">
-                        <FullScreenIframe
-                          src={user.profileUrl || "/assets/Avatar1.png"}
-                        />
-                      </div>
 
-                      {/* Player Info */}
-                      <div className="ml-5">
-                        <p className="font-semibold text-lg text-white">{user.name}</p>
-                        <p className="text-sm text-gray-400">
-                          Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
-                          <span className="text-gray-300">{user.custom.server}</span>
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                {(!recentMatchedUsers || recentMatchedUsers.length === 0) ? (
+                  // Display message if no players were recently matched
+                  <p className="text-gray-400 text-center text-lg">No Recently Matched Players</p>
+                ) : (
+                  <ul className="space-y-4">
+                    {recentMatchedUsers.map((user: User) => (
+                      <li
+                        key={user.id}
+                        className="flex items-center bg-gray-900 bg-opacity-80 backdrop-blur-md p-4 rounded-xl border border-gray-600 hover:bg-opacity-100 transition duration-300"
+                      >
+                        {/* Player Info */}
+                        <div className="ml-5">
+                          <p className="font-semibold text-lg text-white">{user.name}</p>
+                          <p className="text-sm text-gray-400">
+                            Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
+                            <span className="text-gray-300">{user.custom.server}</span>
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
@@ -292,66 +333,66 @@ export default function Home() {
         </section>
 
         {/* Skill Buckets Section */}
-        <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg">
-          <h2 className="text-3xl font-bold text-center mb-6">Skill Buckets</h2>
+        <div className="flex justify-center">
+          <section className="bg-gray-900 text-white p-8 rounded-lg shadow-lg ">
+            <h2 className="text-3xl font-bold text-center mb-6">Skill Buckets</h2>
 
-          <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
-            {[...buckets].map(([range, users], index) => {
-              // Sort users by Elo in descending order
-              const sortedUsers = users.sort((a: User, b: User) => (b.custom?.elo || 0) - (a.custom?.elo || 0));
-              const topUser = sortedUsers[0]; // Highest Elo player
-              const otherUsers = sortedUsers.slice(1, 5); // Other players displayed as small tiles
+            <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
+              {[...buckets].map(([range, users], index) => {
+                // Sort users by Elo in descending order
+                const sortedUsers = users.sort((a: User, b: User) => (b.custom?.elo || 0) - (a.custom?.elo || 0));
+                const topUser = sortedUsers[0]; // Highest Elo player
+                const otherUsers = sortedUsers.slice(1, 5); // Other players displayed as small tiles
 
-              return (
-                <div
-                  key={index}
-                  className="bg-gray-800 p-5 rounded-lg shadow-md min-w-[280px] flex-shrink-0 border border-gray-700"
-                >
-                  {/* Elo Range Title with Dynamic Colors */}
-                  <h3
-                    className={`text-lg font-semibold text-center mb-4 ${
-                      index === 0 ? "text-green-400" : index === 1 ? "text-yellow-400" : "text-red-400"
-                    }`}
+                return (
+                  <div
+                    key={index}
+                    className="bg-gray-800 p-5 rounded-lg shadow-md min-w-[280px] flex-shrink-0 border border-gray-700"
                   >
-                    Elo Range: {range}
-                  </h3>
+                    {/* Elo Range Title with Dynamic Colors */}
+                    <h3
+                      className={`text-lg font-semibold text-center mb-4 ${
+                        index === 0 ? "text-green-400" : index === 1 ? "text-yellow-400" : "text-red-400"
+                      }`}
+                    >
+                      Elo Range: {range}
+                    </h3>
 
-                  {/* 🏆 Top Player Tile (Larger, Rectangular) */}
-                  {topUser && (
-                    <div className="bg-gray-700 p-4 rounded-xl shadow-lg flex flex-col items-center">
-                      <div className="w-[200px] h-[120px] border-2 border-blue-400 shadow-md mb-2">
-                        <FullScreenIframe
-                          src={topUser.profileUrl || "/assets/Avatar1.png"}
-                        />
+                    {/* 🏆 Top Player Tile (Larger, Rectangular) */}
+                    {topUser && (
+                      <div className="bg-gray-700 p-4 rounded-xl shadow-lg flex flex-col items-center">
+                        <div className="w-[200px] h-[120px] border-2 border-blue-400 shadow-md mb-2">
+                          <FullScreenIframe
+                            src={topUser.profileUrl || "/assets/Avatar1.png"}
+                          />
+                        </div>
+                        <p className="font-semibold text-lg">{topUser.name}</p>
+                        <p className="text-sm text-gray-400">
+                          Elo: <span className="text-blue-400">{topUser.custom?.elo}</span>
+                        </p>
                       </div>
-                      <p className="font-semibold text-lg">{topUser.name}</p>
-                      <p className="text-sm text-gray-400">
-                        Elo: <span className="text-blue-400">{topUser.custom?.elo}</span>
-                      </p>
+                    )}
+
+                    {/* 🏅 Average Player Tiles (Compact, No Iframe) */}
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      {otherUsers.map((user, idx) => (
+                        <div key={idx} className="bg-gray-700 p-2 rounded-md flex flex-col items-center text-center">
+                          <p className="text-sm font-semibold">{user.name}</p>
+                          <p className="text-xs text-gray-400">Elo: {user.custom?.elo}</p>
+                        </div>
+                      ))}
                     </div>
-                  )}
 
-                  {/* 🏅 Average Player Tiles (Compact, No Iframe) */}
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    {otherUsers.map((user, idx) => (
-                      <div key={idx} className="bg-gray-700 p-2 rounded-md flex flex-col items-center text-center">
-                        <p className="text-sm font-semibold">{user.name}</p>
-                        <p className="text-xs text-gray-400">Elo: {user.custom?.elo}</p>
-                      </div>
-                    ))}
+                    {/* Total Players */}
+                    <div className="mt-4 text-center text-gray-400 text-sm">
+                      {users.length} players in this bucket
+                    </div>
                   </div>
-
-                  {/* Total Players */}
-                  <div className="mt-4 text-center text-gray-400 text-sm">
-                    {users.length} players in this bucket
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-
+                );
+              })}
+            </div>
+          </section>
+        </div>
       </main>
 
       {/* Footer */}

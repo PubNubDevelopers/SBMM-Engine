@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { SBMContext } from "@/context/SBMContext";
 import { sendMatchmakingRequest } from "@/api/matchmaking ";
 import { User } from "@pubnub/chat";
+import Link from "next/link";
 
 const AvatarPage: React.FC = () => {
 
@@ -24,8 +25,10 @@ const AvatarPage: React.FC = () => {
   const [preferredMode, setPreferredMode] = useState("Casual");
 
   // User Data
-  const [name, setName] = useState("Temp");
-  const [email, setEmail] = useState("example@example.com");
+  const [name, setName] = useState("");
+
+  // Error Message
+  const [showError, setShowError] = useState(false);
 
 
   useEffect(() => {
@@ -40,6 +43,7 @@ const AvatarPage: React.FC = () => {
   const updateUser = async (userId: string): Promise<User | null> => {
     if(chat){
       return await chat.updateUser(userId, {
+        name: name,
         custom: {
           elo,
           toxicityLevel: toxicity,
@@ -73,7 +77,6 @@ const AvatarPage: React.FC = () => {
       else{
         user = await chat.createUser(userId, {
           name: name,
-          email: email
         });
 
         user = await updateUser(userId);
@@ -113,7 +116,29 @@ const AvatarPage: React.FC = () => {
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-900 text-white">
       {/* Left Panel - Player Traits */}
       <div className="w-full md:w-1/3 p-6 bg-gradient-to-br from-gray-800/70 to-gray-900/80 backdrop-blur-md rounded-xl shadow-lg flex flex-col space-y-6">
-        <h2 className="text-3xl font-bold text-white">Player Traits</h2>
+        <div className="flex items-center space-x-4">
+          {/* Back Button with Icon */}
+          <Link href="/" className="group">
+            <button className="w-12 h-12 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-full transition">
+              ⬅
+            </button>
+          </Link>
+
+          {/* Matchmaking Results Title */}
+          <h1 className="text-3xl font-bold">Player Stats</h1>
+        </div>
+
+        {/* Name Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Player Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)} // Update name state
+            placeholder="Enter your name"
+            className="w-full p-3 bg-gray-700/60 text-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition"
+          />
+        </div>
 
         {/* Toxicity Level */}
         <div>
@@ -169,13 +194,27 @@ const AvatarPage: React.FC = () => {
 
         {/* Start Matchmaking Button */}
         <div className="mt-6">
-          <button onClick={handleMatchmaking}
+          <button
+            onClick={() => {
+              if (!name.trim()) {
+                setShowError(true); // Show error message
+              } else {
+                setShowError(false);
+                handleMatchmaking();
+              }
+            }}
             className={`w-full py-3 text-white text-lg font-semibold rounded-lg transition ${
-              loading ? "bg-gray-600 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-md hover:shadow-lg"
+              loading || !name.trim() ? "bg-gray-600 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-md hover:shadow-lg"
             }`}
-            disabled={loading}>
+            disabled={loading || !name.trim()}
+          >
             {loading ? "Searching..." : "Start Matchmaking"}
           </button>
+
+          {/* Error Message: Shows only when user tries to start without entering a name */}
+          {showError && !name.trim() && (
+            <p className="mt-2 text-red-500 text-sm text-center">You must enter a name to start matchmaking.</p>
+          )}
         </div>
 
         {/* Loading Animation */}
