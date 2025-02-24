@@ -23,26 +23,20 @@ This demo showcases how to run a Skill Based Matchmaking Algorithm in a producti
 > This demo will give you an impression of the kind of real-time features you can add to your SBM matchmaking system with PubNub. The demo is written in our [TypeScript Chat SDK](https://www.pubnub.com/docs/chat/chat-sdk/overview) to make hosting easier. We also support client side engines such as [Unreal Engine](https://www.pubnub.com/docs/chat/unreal-chat-sdk/overview), and [Unity](https://www.pubnub.com/docs/chat/unity-chat-sdk/overview). This demo simulates "fake" clients to join matches, confirm the match that they have joined, and play a game updating their elo ratings accordingly. This demo is designed to run locally within a browser.
 
 ![Alt text](assets/client.screenshot.png)
+![Alt text](assets/client.avatar.png)
 
 ## Architecture Overview
 
 > This is architecture explains how the client communicates with the server componenet utilizing our [TypeScript Chat SDK](https://www.pubnub.com/docs/chat/chat-sdk/overview). This architecture is set up in a way where the individual user has to confirm the match they have joined before a game is actually created.
 
-![Alt text](assets/sbm.drawio.png)
+![Alt text](assets/SBM.png)
 
-1. The client signs in using PubNub AppContext
-2. Create a PubNub Membership by joining the Matchmaking Channel
-3. Server requests latency from the client.
-4. Client retrives their latency using a third party service.
-5. SBM module calculates the cost-optimal solution for matchming players with the lowest latencies
-6.  SBM module get skill level from AppContext to add to the original latency matrix to find the cost-optimal solution for matchming players together with similar skill
-7. Creates a pre-lobby channel and sends it to the two players that are matched together
-8. ^^
-9. Clients can now confirm or deny the match by send a message to the pre-lobby channel. Pre-lobby channel timout after 30s.
-10. Server creates a game lobby by creating a PubNub channel and sends it to the corresponding clients that agreed to the match
-11. The client does not confirm the match and is entered back into the matchmaking process starting from (2)
-12. (Same as 10)
-13. Visualize the matchmaking DB using PubNub App Context
+1. Client sends a matchmaking request using pubnub.publish("Location ID")
+2. Server listens for matchmaking requests
+3. Server gets matchmaking constrainsts by utilizing PubNub Illuminate
+4. Server grabs details about User from PubNub App Context
+5. Server processes matchmaking request using matchmaking constraints and user details
+6. Server creates a PubNub "lobby" channel and sends it to the corresponding matched players
 
 ## Folder Structure
 
