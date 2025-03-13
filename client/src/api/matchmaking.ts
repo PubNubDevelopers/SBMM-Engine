@@ -19,7 +19,6 @@ export async function sendMatchmakingRequest(
       }
     );
 
-    console.log("Matchmaking Response:", response.data.players);
     return response.data.players; // Returns the list of matched User objects
   } catch (error) {
     console.error("Error calling matchmaking API:", error);
