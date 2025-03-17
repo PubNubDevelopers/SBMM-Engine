@@ -21,6 +21,29 @@ export async function createSessionAPI(player1Id: string, player2Id: string): Pr
   }
 }
 
+export async function startSessionAPI(sessionId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`http://127.0.0.1:8080/session/start/${sessionId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`❌ Error starting session: ${response.statusText}`);
+      return false;
+    }
+
+    const data = await response.json();
+    console.log(`✅ Session started: ${data.session_id}`);
+    return true;
+  } catch (error) {
+    console.error("❌ API request failed:", error);
+    return false;
+  }
+}
+
 /**
  * Calls the deleteSession API to clean up the session after the game finishes.
  *
