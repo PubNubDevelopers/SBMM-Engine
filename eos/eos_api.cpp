@@ -15,7 +15,9 @@
 #include "eos_types.h"
 #include "eos_common.h"
 
+#ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
+#endif
 #include <cstdlib>
 
 using namespace std;
