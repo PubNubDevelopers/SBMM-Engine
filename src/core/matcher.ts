@@ -5,6 +5,7 @@ import { getOrCreateChannel, notifyClient, sendIlluminateData, sendTextWithRetry
 import { delay } from "../utils/general";
 import { retryOnFailure } from "../utils/error";
 import { simulateGame } from "./game";
+import { createSessionAPI } from "../api/session";
 
 const serverID = "server"
 
@@ -126,9 +127,17 @@ async function createPreLobbyListener(player1: User, player2: User) {
       const result = await Promise.race([confirmationPromise, confirmationTimeout]);
 
       if (result === 'confirmed') {
-        await createChannelLobby(player1, player2, preLobbyChannel);
-        await simulateGame(player1, player2);
-        await notifyClientofMatchFinished(player1.id, player2.id);
+        // ✅ Call the createSession API
+        const sessionId = await createSessionAPI(player1.id, player2.id);
+
+        if (sessionId) {
+          console.log(`🎮 Session created successfully: ${sessionId}`);
+          await createChannelLobby(player1, player2, preLobbyChannel);
+          await simulateGame(player1, player2, sessionId);
+          await notifyClientofMatchFinished(player1.id, player2.id);
+        } else {
+          console.error("❌ Failed to create session before starting game!");
+        }
       } else if (result === 'timeout') {
         await punishUnconfirmedPlayers(player1, player2, player1Confirmed, player2Confirmed);
         await sendTextWithRetry(preLobbyChannel, "TIMEOUT");

@@ -1,8 +1,9 @@
 import { User } from "@pubnub/chat";
 import { getConstraints } from "./constraints";
 import { sendIlluminateData, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
+import { deleteSessionAPI } from "../api/session";
 
-export async function simulateGame(player1: User, player2: User) {
+export async function simulateGame(player1: User, player2: User, sessionId: string) {
   const { ELO_ADJUSTMENT_WEIGHT } = getConstraints();
 
   const K_FACTOR = 32; // Standard K-factor
@@ -101,4 +102,6 @@ export async function simulateGame(player1: User, player2: User) {
   await sendIlluminateData({
     playStyle: player2.custom?.playStyle ?? "Balanced",
   })
+
+  await deleteSessionAPI(sessionId);
 }

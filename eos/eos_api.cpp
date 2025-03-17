@@ -236,6 +236,49 @@ bool DestroySession(const string& sessionId) {
     return true;
 }
 
+void EOS_CALL StartSessionCallback(const EOS_Sessions_StartSessionCallbackInfo* Data) {
+    if (!Data) {
+        std::cerr << "❌ ERROR: StartSession callback received NULL data!" << std::endl;
+        return;
+    }
+
+    std::cout << "🔔 StartSession Callback Triggered!" << std::endl;
+    std::cout << "📡 Callback Result: " << EOS_EResult_ToString(Data->ResultCode) << std::endl;
+
+    switch (Data->ResultCode) {
+        case EOS_EResult::EOS_Success:
+            std::cout << "✅ Session successfully started!" << std::endl;
+            break;
+        case EOS_EResult::EOS_NotFound:
+            std::cerr << "❌ ERROR: Session not found!" << std::endl;
+            break;
+        case EOS_EResult::EOS_Sessions_OutOfSync:
+            std::cerr << "⚠️ WARNING: Session is out of sync. Will update on next backend connection!" << std::endl;
+            break;
+        case EOS_EResult::EOS_InvalidParameters:
+            std::cerr << "❌ ERROR: Invalid session parameters!" << std::endl;
+            break;
+        default:
+            std::cerr << "❌ ERROR: Failed to start session! Error: " << EOS_EResult_ToString(Data->ResultCode) << std::endl;
+            break;
+    }
+}
+
+void StartEOSSession(EOS_HSessions SessionHandle, const std::string& sessionName) {
+    if (!SessionHandle) {
+        std::cerr << "❌ ERROR: SessionHandle is NULL!" << std::endl;
+        return;
+    }
+
+    EOS_Sessions_StartSessionOptions StartOptions = {};
+    StartOptions.ApiVersion = EOS_SESSIONS_STARTSESSION_API_LATEST;
+    StartOptions.SessionName = sessionName.c_str();
+
+    std::cout << "🎮 Requesting to start session: " << sessionName << std::endl;
+
+    EOS_Sessions_StartSession(SessionHandle, &StartOptions, nullptr, StartSessionCallback);
+}
+
 // 🎯 Main function: Starts API server
 int main() {
     cout << "🚀 Starting SBMM API..." << endl;
@@ -261,6 +304,24 @@ int main() {
 
         return crow::response{500, "Failed to destroy session"};
     });
+    CROW_ROUTE(app, "/session/start/<string>").methods("POST"_method)([](const crow::request&, string sessionId) {
+        cout << "🎮 Starting session: " << sessionId << endl;
+
+        if (!SessionHandle) {
+            cerr << "❌ ERROR: SessionHandle is NULL!" << endl;
+            return crow::response{500, "SessionHandle is NULL"};
+        }
+
+        // Start the session
+        StartEOSSession(SessionHandle, sessionId);
+
+        // Respond with session ID and status
+        json::object res;
+        res["session_id"] = sessionId;
+        res["status"] = "started";
+        return crow::response{200, json::serialize(res)};
+    });
+
 
     cout << "✅ API Server is running on port 8080..." << endl;
 
