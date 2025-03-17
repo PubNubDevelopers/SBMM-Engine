@@ -340,9 +340,16 @@ int main() {
     });
 
     // ✅ Keep EOS platform ticking (MacOS Fix)
+    #ifdef __APPLE__
     while (CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, true)) {
         EOS_Platform_Tick(PlatformHandle);
     }
+    #else
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        EOS_Platform_Tick(PlatformHandle);
+    }
+    #endif
 
     // ✅ Join server thread before exiting (This ensures clean shutdown)
     serverThread.join();
