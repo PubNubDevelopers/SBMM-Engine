@@ -13,6 +13,7 @@ let constraints = {
 const pubnub = new PubNub({
   publishKey: process.env.PUBLISH_KEY!,
   subscribeKey: process.env.SUBSCRIBE_KEY!,
+  secretKey: process.env.SECRET_KEY,
   userId: 'Illuminate-Sim',
 });
 
