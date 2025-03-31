@@ -5,6 +5,7 @@ import { Chat, Message, User } from "@pubnub/chat";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { SBMContext, SkillRange, Threshold } from "../types/contextTypes";
 import { developerMessage } from "@/utils/general";
+import { requestAccessManagerToken } from "@/api/grant";
 
 export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   const [chat, setChat] = useState<Chat>();
@@ -30,10 +31,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   */
   const initChat = async () => {
     try{
-      console.log("Init Chat");
       const authKey = await requestAccessManagerToken("client-sim");
-
-      console.log(authKey);
 
       const chat = await Chat.init({
         publishKey: process.env.NEXT_PUBLIC_PUBLISH_KEY,
