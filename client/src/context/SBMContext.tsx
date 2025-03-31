@@ -30,17 +30,25 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
   */
   const initChat = async () => {
     try{
+      console.log("Init Chat");
+      const authKey = await requestAccessManagerToken("client-sim");
+
+      console.log(authKey);
+
       const chat = await Chat.init({
         publishKey: process.env.NEXT_PUBLIC_PUBLISH_KEY,
         subscribeKey: process.env.NEXT_PUBLIC_SUBSCRIBE_KEY,
-        userId: "client-sim"
+        userId: "client-sim",
+        authKey: authKey
       });
 
       const pubnub = new PubNub({
         publishKey: process.env.NEXT_PUBLIC_PUBLISH_KEY!,
         subscribeKey: process.env.NEXT_PUBLIC_SUBSCRIBE_KEY!,
-        userId: 'Illuminate-Sim',
+        userId: 'client-sim',
       });
+
+      pubnub.setToken(authKey);
 
       setChat(chat);
       setPubNub(pubnub);

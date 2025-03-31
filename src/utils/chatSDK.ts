@@ -9,8 +9,16 @@ const serverID = "server";
 const pubnub = new PubNub({
   publishKey: process.env.PUBLISH_KEY!,
   subscribeKey: process.env.SUBSCRIBE_KEY!,
+  secretKey: process.env.SECRET_KEY,
   userId: 'Illuminate-Sim',
 });
+
+const salesPubNub = new PubNub({
+  publishKey: process.env.SALES_PUBLISH_KEY!,
+  subscribeKey: process.env.SALES_SUBSCRIBE_KEY!,
+  secretKey: process.env.SALES_SECRET_KEY,
+  userId: "Illuminate-Sim"
+})
 
 /**
  * Fetch members from the matchmaking channel
@@ -114,6 +122,13 @@ export async function sendTextWithRetry(channel: Channel, message: string) {
 export async function sendIlluminateData(message: Payload){
   await retryOnFailure(async () => {
     await pubnub.publish({
+      channel: "illuminate-data",
+      message: message
+    });
+  }, 3, 1000);
+
+  await retryOnFailure(async () => {
+    await salesPubNub.publish({
       channel: "illuminate-data",
       message: message
     });
