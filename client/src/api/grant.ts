@@ -2,7 +2,7 @@
 //  In production, you would have some kind of log-in server and authentication, then once logged in
 //  you can assign permissions based on that user's ID.  Since the showcase does not require authentication
 //  to log-in, it is more permissive than a production app would be.
-async function requestAccessManagerToken(userId: string) {
+export async function requestAccessManagerToken(userId: string) {
   try{
     console.log("Calling server");
     const SERVER = 'https://devrel-demos-access-manager.netlify.app/.netlify/functions/api';
@@ -18,8 +18,6 @@ async function requestAccessManagerToken(userId: string) {
     });
 
     const token = (await response.json()).body.token;
-
-    console.log(token);
 
     return token;
   }
