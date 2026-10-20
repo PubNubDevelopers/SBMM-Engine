@@ -1,7 +1,7 @@
 import { Channel, Chat, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../../src/utils/pubnub";
 import { retryOnFailure } from "../utils/error";
-import { sendIlluminateData, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
+import { joinChannel, sendIlluminateData, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 
 type ChannelTrackCallBackFunction = (data: string) => void;
 
@@ -49,7 +49,7 @@ export async function simulateUser(
 
       // Helper to join a pre-lobby and listen for updates
       async function joinPreLobby(preLobbyChannel: Channel) {
-        await preLobbyChannel.join(async (message: Message) => {
+        const stopPreLobby = await joinChannel(chat, preLobbyChannel, async (message: Message) => {
           if (message.content.text.startsWith("game-lobby-")) {
             gameLobbyChannelID = message.content.text;
 
@@ -65,6 +65,7 @@ export async function simulateUser(
             }
 
             await updateMatchesFormed(chat, gameLobbyChannelID, channelTracker);
+            stopPreLobby();
             await retryOnFailure(() => preLobbyChannel.leave(), 3, 2000);
           }
         });
@@ -78,7 +79,7 @@ export async function simulateUser(
         );
       }, 3, 2000);
 
-      await userChannel.join(async (message: Message) => {
+      await joinChannel(chat, userChannel, async (message: Message) => {
         try {
           const parsedMessage = tryParseJSON(message.content.text) || { message: message.content.text };
 
@@ -173,11 +174,12 @@ async function joinGameLobby(gameLobbyID: string, chat: Chat) {
     throw new Error("Failed to find matchmaking channel"); // Throw an error if the channel is not found
   }
 
-  await gameLobbyChannel.join((_) => {});
+  const stopGameLobby = await joinChannel(chat, gameLobbyChannel, (_) => {});
 
   // Wait for 2 minutes (120,000 milliseconds)
   await new Promise((resolve) => setTimeout(resolve, 120000));
 
+  stopGameLobby();
   await gameLobbyChannel.leave();
 }
 
@@ -215,7 +217,7 @@ async function updateStatsUser(chat: Chat, startTime: number, userTracker: strin
 
     var totalPlayers = user.custom?.totalPlayers ?? 0;
     var avgWaitTime = user.custom?.avgWaitTime ?? 0;
-    var matchesFormed = user.custom?.matchesFormed ?? 0;
+    var matchesFormed = (user.custom as any)?.matchesFormed ?? 0;
 
     totalPlayers = userTracker.length;
     avgWaitTime = timeDifferenceInSeconds;
@@ -256,7 +258,7 @@ async function updateMatchesFormed(chat: Chat, channel: string, channelTracker: 
       });
     }
 
-    var matchesFormed = user.custom?.matchesFormed ?? 0;
+    var matchesFormed = (user.custom as any)?.matchesFormed ?? 0;
     matchesFormed = matchesFormed + 1;
 
     const json = {

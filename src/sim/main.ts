@@ -211,29 +211,29 @@ async function cleanUserData(users: User[]): Promise<User[]> {
       needsUpdate = true;
 
       // Simulated Matchmaking-Related Fields
-      const matchesPlayed = user.custom?.matchesPlayed ?? Math.floor(Math.random() * 200);
-      const consecutiveWins = user.custom?.consecutiveWins ?? Math.floor(Math.random() * 5);
+      const matchesPlayed = (user.custom as any)?.matchesPlayed ?? Math.floor(Math.random() * 200);
+      const consecutiveWins = (user.custom as any)?.consecutiveWins ?? Math.floor(Math.random() * 5);
 
       updatedData.custom = {
-        elo: user.custom?.elo ?? (needsUpdate = true, generateLongTailElo()),
-        totalMatches: user.custom?.totalMatches ?? (needsUpdate = true, matchesPlayed + Math.floor(consecutiveWins * Math.random() * 2)), // Simulate total matches
-        platform: user.custom?.platform ?? (needsUpdate = true, "PC"),
-        voiceChatEnabled: user.custom?.voiceChatEnabled ?? (needsUpdate = true, Math.random() > 0.5),
-        consecutiveWins: user.custom?.consecutiveWins ?? (needsUpdate = true, consecutiveWins),
-        playFrequency: user.custom?.playFrequency ?? (needsUpdate = true, "Medium"),
-        matchesPlayed: user.custom?.matchesPlayed ?? (needsUpdate = true, matchesPlayed),
-        playStyle: user.custom?.playStyle ?? (needsUpdate = true, "Balanced"),
-        teamPreference: user.custom?.teamPreference ?? (needsUpdate = true, "Solo"),
-        gameModePreference: user.custom?.gameModePreference ?? (needsUpdate = true, "Ranked"),
-        completionRate: user.custom?.completionRate ?? (needsUpdate = true, 90 + Math.random() * 10),
-        toxicityLevel: user.custom?.toxicityLevel ?? (needsUpdate = true, "Low"),
-        latency: user.custom?.latency ?? (needsUpdate = true, Math.floor(Math.random() * 50) + 20),
-        punished: user.custom?.punished ?? (needsUpdate = true, false),
-        confirmed: user.custom?.confirmed ?? (needsUpdate = true, false),
-        inMatch: user.custom?.inMatch ?? (needsUpdate = true, false),
-        inPreLobby: user.custom?.inPreLobby ?? (needsUpdate = true, false),
-        server: user.custom?.server ?? (needsUpdate = true, "NA"),
-        searching: user.custom?.searching ?? (needsUpdate = true, false),
+        elo: (user.custom as any)?.elo ?? (needsUpdate = true, generateLongTailElo()),
+        totalMatches: (user.custom as any)?.totalMatches ?? (needsUpdate = true, matchesPlayed + Math.floor(consecutiveWins * Math.random() * 2)), // Simulate total matches
+        platform: (user.custom as any)?.platform ?? (needsUpdate = true, "PC"),
+        voiceChatEnabled: (user.custom as any)?.voiceChatEnabled ?? (needsUpdate = true, Math.random() > 0.5),
+        consecutiveWins: (user.custom as any)?.consecutiveWins ?? (needsUpdate = true, consecutiveWins),
+        playFrequency: (user.custom as any)?.playFrequency ?? (needsUpdate = true, "Medium"),
+        matchesPlayed: (user.custom as any)?.matchesPlayed ?? (needsUpdate = true, matchesPlayed),
+        playStyle: (user.custom as any)?.playStyle ?? (needsUpdate = true, "Balanced"),
+        teamPreference: (user.custom as any)?.teamPreference ?? (needsUpdate = true, "Solo"),
+        gameModePreference: (user.custom as any)?.gameModePreference ?? (needsUpdate = true, "Ranked"),
+        completionRate: (user.custom as any)?.completionRate ?? (needsUpdate = true, 90 + Math.random() * 10),
+        toxicityLevel: (user.custom as any)?.toxicityLevel ?? (needsUpdate = true, "Low"),
+        latency: (user.custom as any)?.latency ?? (needsUpdate = true, Math.floor(Math.random() * 50) + 20),
+        punished: (user.custom as any)?.punished ?? (needsUpdate = true, false),
+        confirmed: (user.custom as any)?.confirmed ?? (needsUpdate = true, false),
+        inMatch: (user.custom as any)?.inMatch ?? (needsUpdate = true, false),
+        inPreLobby: (user.custom as any)?.inPreLobby ?? (needsUpdate = true, false),
+        server: (user.custom as any)?.server ?? (needsUpdate = true, "NA"),
+        searching: (user.custom as any)?.searching ?? (needsUpdate = true, false),
       };
 
       try {

@@ -93,7 +93,7 @@ const MatchResults: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
         {matchedPlayers.slice(0, 4).map((player, index) => {
           const compatibilityScore =
-            0.4 * (1 - Math.abs((player.custom?.elo ?? 1000) - (userProfile.custom?.elo ?? 1000)) / 2000) +
+            0.4 * (1 - Math.abs(((player.custom?.elo as number) ?? 1000) - ((userProfile.custom?.elo as number) ?? 1000)) / 2000) +
             0.2 * (player.custom?.toxicityLevel === userProfile.custom?.toxicityLevel ? 1 : 0) +
             0.2 * (player.custom?.playStyle === userProfile.custom?.playStyle ? 1 : 0) +
             0.2 * (player.custom?.region === userProfile.custom?.server ? 1 : 0);
@@ -136,7 +136,7 @@ const MatchResults: React.FC = () => {
                       {
                         label: userProfile.name || "You",
                         data: [
-                          (userProfile.custom?.elo ?? 1000) / 2000,
+                          ((userProfile.custom?.elo as number) ?? 1000) / 2000,
                           userProfile.custom?.toxicityLevel === "Low" ? 1 : userProfile.custom?.toxicityLevel === "Medium" ? 0.5 : 0,
                           userProfile.custom?.playStyle === "Balanced" ? 1 : 0,
                           1,
@@ -147,7 +147,7 @@ const MatchResults: React.FC = () => {
                       {
                         label: player.name,
                         data: [
-                          (player.custom?.elo ?? 1000) / 2000,
+                          ((player.custom?.elo as number) ?? 1000) / 2000,
                           player.custom?.toxicityLevel === "Low" ? 1 : player.custom?.toxicityLevel === "Medium" ? 0.5 : 0,
                           player.custom?.playStyle === "Balanced" ? 1 : 0,
                           player.custom?.server === userProfile.custom?.server ? 1 : 0,

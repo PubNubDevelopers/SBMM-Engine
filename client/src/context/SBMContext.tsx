@@ -35,7 +35,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
       const chat = await Chat.init({
         publishKey: process.env.NEXT_PUBLIC_PUBLISH_KEY,
-        subscribeKey: process.env.NEXT_PUBLIC_SUBSCRIBE_KEY,
+        subscribeKey: process.env.NEXT_PUBLIC_SUBSCRIBE_KEY!,
         userId: "client-sim",
         authKey: authKey
       });
@@ -78,7 +78,7 @@ export const SBMContextProvider = ({ children }: { children: ReactNode }) => {
 
       setStatsUser(user);
 
-      user.streamUpdates((user) => {
+      user.onUpdated((user) => {
         setStatsUser(user);
       });
     }
@@ -257,8 +257,8 @@ const hydrateUsers = async (users: User[]) => {
         const timeToken = membership.lastReadMessageTimetoken;
         const channelName = membership.channel.id;
 
-        // Ensure timeToken is defined
-        if (timeToken !== undefined) {
+        // Ensure timeToken is defined (Chat SDK 1.x returns null when it is not set)
+        if (timeToken !== undefined && timeToken !== null) {
           const timeTokenBigInt = BigInt(timeToken);
           const currentTimeToken = BigInt(Date.now()) * BigInt(10_000); // Current time in timeToken format
           const isWithinLastFiveMinutes = currentTimeToken - timeTokenBigInt <= BigInt(fiveMinutesInTimetokens);
@@ -302,7 +302,7 @@ const hydrateUsers = async (users: User[]) => {
 
       // Iterate through the users and assign them to the appropriate skill bucket
       users.forEach(user => {
-        const elo = user.custom?.elo || 0;
+        const elo = (user.custom?.elo as number) || 0;
 
         if (elo < 1000) {
           updatedBuckets.get(SkillRange.Range1)?.push(user);
@@ -377,8 +377,11 @@ const hydrateUsers = async (users: User[]) => {
       watchChannel = await chat.createPublicConversation({ channelId: watchChannelID });
     }
 
+    // Chat SDK 1.x: join() only creates the membership, onMessageReceived() listens for messages
+    watchChannel.join();
+
     // Listen for incoming messages
-    watchChannel.join(async (message: Message) => {
+    watchChannel.onMessageReceived(async (message: Message) => {
       let parsedMessage;
       try {
         parsedMessage = JSON.parse(message.content.text);

@@ -106,8 +106,8 @@ export default function Home() {
                           <div className="ml-4 flex-1">
                             <p className="font-semibold text-white text-lg">{user.name}</p>
                             <p className="text-sm text-gray-400">
-                              Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
-                              <span className="text-gray-300">{user.custom.server}</span>
+                              Skill: <span className="text-blue-400">{user.custom!.elo}</span> | Region:{" "}
+                              <span className="text-gray-300">{user.custom!.server}</span>
                             </p>
                           </div>
 
@@ -152,7 +152,7 @@ export default function Home() {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400 text-lg">Last Wait Time:</span>
                       <span className="text-green-400 text-2xl font-semibold">
-                        {statsUser.custom.avgWaitTime?.toFixed(2)}s
+                        {(statsUser.custom.avgWaitTime as number)?.toFixed(2)}s
                       </span>
                     </div>
                   </>
@@ -178,8 +178,8 @@ export default function Home() {
                         <div className="ml-5">
                           <p className="font-semibold text-lg text-white">{user.name}</p>
                           <p className="text-sm text-gray-400">
-                            Skill: <span className="text-blue-400">{user.custom.elo}</span> | Region:{" "}
-                            <span className="text-gray-300">{user.custom.server}</span>
+                            Skill: <span className="text-blue-400">{user.custom!.elo}</span> | Region:{" "}
+                            <span className="text-gray-300">{user.custom!.server}</span>
                           </p>
                         </div>
                       </li>
@@ -314,7 +314,7 @@ export default function Home() {
             <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
               {[...buckets].map(([range, users], index) => {
                 // Sort users by Elo in descending order
-                const sortedUsers = users.sort((a: User, b: User) => (b.custom?.elo || 0) - (a.custom?.elo || 0));
+                const sortedUsers = users.sort((a: User, b: User) => ((b.custom?.elo as number) || 0) - ((a.custom?.elo as number) || 0));
                 const topUser = sortedUsers[0]; // Highest Elo player
                 const otherUsers = sortedUsers.slice(1, 5); // Other players displayed as small tiles
 

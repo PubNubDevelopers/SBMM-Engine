@@ -1,7 +1,7 @@
 import { Channel, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../utils/pubnub";
 import { pairUsersBySkill } from "./sbm";
-import { getOrCreateChannel, notifyClient, sendIlluminateData, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
+import { getOrCreateChannel, joinChannel, notifyClient, sendIlluminateData, sendTextWithRetry, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { delay } from "../utils/general";
 import { retryOnFailure } from "../utils/error";
 import { simulateGame } from "./game";
@@ -105,7 +105,7 @@ async function createPreLobbyListener(player1: User, player2: User) {
 
       // Listen for confirmation from both players
       const confirmationPromise = new Promise((resolve) => {
-        preLobbyChannel.join(async (message: Message) => {
+        joinChannel(chat, preLobbyChannel, async (message: Message) => {
           try {
             if (message.content.text === "match_confirmed") {
               const { userId } = message;
