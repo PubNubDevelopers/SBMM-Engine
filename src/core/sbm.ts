@@ -12,10 +12,10 @@ import { getConstraints } from "./constraints";
 function calculateScore(userA: User, userB: User): number {
   const { MAX_ELO_GAP, SKILL_GAP_WEIGHT, REGIONAL_PRIORITY } = getConstraints();
 
-  const eloA = userA.custom?.elo ?? 0;
-  const eloB = userB.custom?.elo ?? 0;
-  const regionA = userA.custom?.server ?? "global";
-  const regionB = userB.custom?.server ?? "global";
+  const eloA = (userA.custom as any)?.elo ?? 0;
+  const eloB = (userB.custom as any)?.elo ?? 0;
+  const regionA = (userA.custom as any)?.server ?? "global";
+  const regionB = (userB.custom as any)?.server ?? "global";
 
   const eloDifference = Math.abs(eloA - eloB);
   if (eloDifference > MAX_ELO_GAP) return Infinity; // Skip pairs exceeding max ELO gap
@@ -109,16 +109,16 @@ export function calculateCompatibilityScore(
     .map((otherUser) => {
       if (!otherUser.custom) return undefined; // Skip users without `custom` fields
 
-      const otherElo = otherUser.custom.elo ?? 0;
+      const otherElo = (otherUser.custom as any).elo ?? 0;
       const eloDiff = Math.abs(elo - otherElo);
 
-      const otherPlayStyle = otherUser.custom.playStyle ?? "Unknown";
+      const otherPlayStyle = (otherUser.custom as any).playStyle ?? "Unknown";
       const playStyleMatch = playStyle === otherPlayStyle ? 20 : 0;
 
-      const otherToxicity = otherUser.custom.toxicityLevel ?? "medium"; // Default to medium
+      const otherToxicity = (otherUser.custom as any).toxicityLevel ?? "medium"; // Default to medium
       const toxicityScore = toxicityScoreMap[toxicityLevel]?.[otherToxicity] ?? 0;
 
-      const otherGameMode = otherUser.custom.gameModePreference ?? "Default";
+      const otherGameMode = (otherUser.custom as any).gameModePreference ?? "Default";
       const gameModeMatch = preferredGameMode === otherGameMode ? 10 : 0;
 
       // Compatibility Score Calculation
@@ -128,7 +128,8 @@ export function calculateCompatibilityScore(
         toxicityScore + // Toxicity compatibility score
         gameModeMatch; // Game mode match adds 10 points
 
-      return { ...otherUser, compatibilityScore: score }; // Add score while keeping the original PubNub User object
+      // Chat SDK 1.x User fields are prototype getters, so spreading the User object would drop them
+      return Object.assign(otherUser, { compatibilityScore: score }); // Add score while keeping the original PubNub User object
     })
     .filter((user): user is UserWithScore => user !== undefined) // Type-safe filtering
     .sort((a, b) => b.compatibilityScore - a.compatibilityScore) // Sort by highest score

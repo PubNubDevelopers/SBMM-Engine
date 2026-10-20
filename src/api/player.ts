@@ -41,7 +41,7 @@ export async function handleMatchmakingRequest(req: any, res: any) {
       return res.status(404).json({ error: "No available players for matchmaking" });
     }
 
-    const { toxicityLevel, playStyle, elo, region, preferredGameMode } = user.custom;
+    const { toxicityLevel, playStyle, elo, region, preferredGameMode } = user.custom as any;
 
     // Run matchmaking algorithm
     const bestMatches = calculateCompatibilityScore(toxicityLevel, playStyle, elo, region, preferredGameMode, users);

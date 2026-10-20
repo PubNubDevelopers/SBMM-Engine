@@ -1,5 +1,5 @@
 import PubNub, { Payload } from 'pubnub';
-import { Channel, Chat, Membership, User } from "@pubnub/chat";
+import { Channel, Chat, Membership, Message, User } from "@pubnub/chat";
 import { getPubNubChatInstance } from "./pubnub";
 import { retryOnFailure, isTransientError } from "./error";
 
@@ -110,6 +110,22 @@ export async function getOrCreateChannel(chat: Chat, channelId: string) {
       return undefined; // Return an empty array or handle gracefully
     }
   }
+}
+
+/**
+ * Join a channel and listen for its messages.
+ *
+ * Chat SDK 1.x: `channel.join()` only creates the membership. It no longer subscribes or sets
+ * `lastReadMessageTimetoken`, so this helper keeps the old `join(callback)` behaviour: membership,
+ * message listener (`onMessageReceived`) and `lastReadMessageTimetoken` (the dashboard reads it to
+ * show "Matched" / "InMatch" players). Returns the function that stops listening; call it before
+ * `channel.leave()`.
+ */
+export async function joinChannel(chat: Chat, channel: Channel, callback: (message: Message) => void): Promise<() => void> {
+  const membership = await channel.join();
+  const stopListening = channel.onMessageReceived(callback);
+  await membership.setLastReadMessageTimetoken(String((await chat.sdk.time()).timetoken));
+  return stopListening;
 }
 
 // Helper function to send a text message with retry logic

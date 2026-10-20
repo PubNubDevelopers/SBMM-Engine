@@ -1,6 +1,6 @@
 import { Message } from "@pubnub/chat";
 import { getPubNubChatInstance } from "../utils/pubnub";
-import { getOrCreateChannel } from "../utils/chatSDK";
+import { getOrCreateChannel, joinChannel } from "../utils/chatSDK";
 
 // Function to simulate player matchmaking and respond
 export async function simulatePlayer() {
@@ -13,7 +13,7 @@ export async function simulatePlayer() {
 
     if (channel) {
       // Listen for incoming messages
-      channel.join(async (message: Message) => {
+      joinChannel(chat, channel, async (message: Message) => {
         try {
           const json = JSON.parse(message.content.text);
           if (json.type === "MatchmakingRequest") {

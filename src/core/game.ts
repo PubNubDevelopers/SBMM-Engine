@@ -18,24 +18,24 @@ export async function simulateGame(player1: User, player2: User, sessionId: stri
   await new Promise((resolve) => setTimeout(resolve, waitTime));
 
   // Skill Factors & Voice Chat Adjustment
-  const player1Skill = player1.custom?.skill || Math.random() * 100;
-  const player2Skill = player2.custom?.skill || Math.random() * 100;
+  const player1Skill = (player1.custom as any)?.skill || Math.random() * 100;
+  const player2Skill = (player2.custom as any)?.skill || Math.random() * 100;
 
-  const voiceChatBonus = player1.custom?.voiceChatEnabled && player2.custom?.voiceChatEnabled ? 1.05 : 1;
+  const voiceChatBonus = (player1.custom as any)?.voiceChatEnabled && (player2.custom as any)?.voiceChatEnabled ? 1.05 : 1;
 
   // Simulate game outcome with voice chat and skill
   const player1Wins =
     Math.random() < (player1Skill * voiceChatBonus) / (player1Skill + player2Skill * voiceChatBonus);
 
   // Calculate expected scores
-  const player1Expected = 1 / (1 + Math.pow(10, (player2.custom?.elo - player1.custom?.elo) / 400));
+  const player1Expected = 1 / (1 + Math.pow(10, ((player2.custom as any)?.elo - (player1.custom as any)?.elo) / 400));
 
   // Calculate base Elo change
   let eloChange = K_FACTOR * ((player1Wins ? 1 : 0) - player1Expected);
 
   // Normalize adjustment based on Elo
-  const player1DistanceFromNormalized = (player1.custom?.elo || NORMALIZED_ELO) - NORMALIZED_ELO;
-  const player2DistanceFromNormalized = (player2.custom?.elo || NORMALIZED_ELO) - NORMALIZED_ELO;
+  const player1DistanceFromNormalized = ((player1.custom as any)?.elo || NORMALIZED_ELO) - NORMALIZED_ELO;
+  const player2DistanceFromNormalized = ((player2.custom as any)?.elo || NORMALIZED_ELO) - NORMALIZED_ELO;
 
   const player1Adjustment = ELO_ADJUSTMENT_WEIGHT / (1 + Math.exp(-player1DistanceFromNormalized / 200));
   const player2Adjustment = ELO_ADJUSTMENT_WEIGHT / (1 + Math.exp(-player2DistanceFromNormalized / 200));
@@ -48,12 +48,12 @@ export async function simulateGame(player1: User, player2: User, sessionId: stri
   const drift = (Math.random() - 0.5) * 10;
 
   // Update player stats
-  const player1NewElo = Math.max(0, Math.round(player1.custom?.elo + eloChange + drift));
-  const player2NewElo = Math.max(0, Math.round(player2.custom?.elo - eloChange - drift));
+  const player1NewElo = Math.max(0, Math.round((player1.custom as any)?.elo + eloChange + drift));
+  const player2NewElo = Math.max(0, Math.round((player2.custom as any)?.elo - eloChange - drift));
 
   // Update win streaks
-  const player1WinsStreak = player1Wins ? (player1.custom?.consecutiveWins || 0) + 1 : 0;
-  const player2WinsStreak = !player1Wins ? (player2.custom?.consecutiveWins || 0) + 1 : 0;
+  const player1WinsStreak = player1Wins ? ((player1.custom as any)?.consecutiveWins || 0) + 1 : 0;
+  const player2WinsStreak = !player1Wins ? ((player2.custom as any)?.consecutiveWins || 0) + 1 : 0;
 
   // Toxicity level influence
   // Adjust toxicity level probability
@@ -61,11 +61,11 @@ export async function simulateGame(player1: User, player2: User, sessionId: stri
 
   // Increase likelihood of a toxic match if either player is already toxic
   const gameToxicity =
-    player1.custom?.toxicityLevel === "High" || player2.custom?.toxicityLevel === "High"
+    (player1.custom as any)?.toxicityLevel === "High" || (player2.custom as any)?.toxicityLevel === "High"
       ? Math.random() < 0.5 ? "High" : "Low" // 50% chance if one or both players are toxic
       : toxicityLevel;
 
-  const updatedToxicityLevel = gameToxicity === "High" ? "High" : player1.custom?.toxicityLevel || "Low";
+  const updatedToxicityLevel = gameToxicity === "High" ? "High" : (player1.custom as any)?.toxicityLevel || "Low";
 
   // Update playStyle based on performance
   const player1PlayStyle =
@@ -96,13 +96,13 @@ export async function simulateGame(player1: User, player2: User, sessionId: stri
   await sendIlluminateData({
     eloMatchAvg: (player1NewElo + player2NewElo) / 2,
     toxicityDetected: gameToxicity,
-    playStyle: player1.custom?.playStyle ?? "Balanced",
-    latency: (player1.custom?.latency ?? 100 + player2.custom?.latency ?? 100)/2,
-    completionRate: (player1.custom?.completionRate ?? 100 + player2.custom?.completionRate ?? 100)/2,
+    playStyle: (player1.custom as any)?.playStyle ?? "Balanced",
+    latency: ((player1.custom as any)?.latency ?? 100 + (player2.custom as any)?.latency ?? 100)/2,
+    completionRate: ((player1.custom as any)?.completionRate ?? 100 + (player2.custom as any)?.completionRate ?? 100)/2,
     eloGap: Math.abs(player1NewElo - player2NewElo)
   });
   await sendIlluminateData({
-    playStyle: player2.custom?.playStyle ?? "Balanced",
+    playStyle: (player2.custom as any)?.playStyle ?? "Balanced",
   })
 
   await deleteSessionAPI(sessionId);

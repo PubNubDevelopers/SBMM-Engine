@@ -1,7 +1,7 @@
 import { Chat, User } from "@pubnub/chat";
 import { getPubNubChatInstance, getPubNubInstance } from '../utils/pubnub';
 import { processMatchMaking } from "./matcher";
-import { getOrCreateChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
+import { getOrCreateChannel, joinChannel, notifyClient, updatePlayerMetadataWithRetry } from "../utils/chatSDK";
 import { retryOnFailure, isTransientError } from "../utils/error";
 import { subscribeToConstraintsUpdates } from "./constraints";
 
@@ -33,7 +33,7 @@ export async function startListener() {
     subscribeToConstraintsUpdates();
 
     // Add a message listener for the matchmaking channel
-    regionChannel.join(async (message) => {
+    joinChannel(chat, regionChannel, async (message) => {
       const userId = message.userId;
       const messageContent = message.content.text;
 
